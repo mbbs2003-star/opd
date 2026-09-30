@@ -133,3 +133,64 @@
     padding: 2rem;
   }
 }
+
+/* Patient portal feature grid: explicit desktop geometry avoids Bootstrap/fallback
+   grid conflicts and keeps each feature card full-width inside its column. */
+@media (min-width: 992px) {
+  .clinic-site:not(.landing-premium) .portal-feature-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    grid-column: auto !important;
+    display: flex;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: 1 1 auto;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card .feature-icon {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    font-size: 1.55rem;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card h5 {
+    font-size: 1.3rem;
+    margin-top: 1.35rem;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card p {
+    max-width: none;
+    line-height: 1.7;
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 1400px) {
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card {
+    min-height: 300px;
+    padding: 2.15rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card {
+    min-height: 0;
+  }
+}
