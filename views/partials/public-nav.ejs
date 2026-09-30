@@ -19,8 +19,7 @@
 <div class="landing-topbar">
   <div class="container landing-nav-container">
     <a href="/" class="brand text-decoration-none text-white" aria-label="<%= siteSettings.hospital_name %> home">
-      <span class="brand-mark"><% if (siteSettings.logo_path) { %><img src="<%= siteSettings.logo_path %>" alt=""><% } else { %><i class="bi bi-hospital"></i><% } %></span>
-      <span class="brand-name"><%= siteSettings.hospital_name %></span>
+      <span class="brand-mark"><img src="/images/chhayabithi-logo.webp" alt="<%= siteSettings.hospital_name %>"></span>
     </a>
     <nav class="public-desktop-nav" aria-label="Primary navigation">
       <a href="/" class="<%= currentPage === 'home' ? 'active' : '' %>">Home</a>
