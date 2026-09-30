@@ -71,13 +71,41 @@
 @media(max-width:575.98px){
  .landing-topbar .brand-mark{width:82px;height:41px;flex-basis:82px}
 }
-/* Services feature cards: keep the three-column desktop grid visually balanced. */
+/* Desktop feature cards: force the card to fill its Bootstrap column.
+   This prevents narrow content-width cards when a parent column is flex-aligned. */
 @media (min-width: 992px) {
+  .clinic-site:not(.landing-premium) .row.g-4 > [class*="col-"] > .feature-card {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card {
+    min-height: 240px;
+    padding: 1.85rem;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card .feature-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 1.4rem;
+    flex: 0 0 52px;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card h5 {
+    font-size: 1.15rem;
+    margin-top: 1.2rem;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card p {
+    max-width: 34rem;
+    margin-bottom: 0;
+  }
+
   .clinic-site:not(.landing-premium) .row.g-4 > .col-md-6.col-lg-4 > .feature-card {
     min-height: 240px;
-    width: 100%;
     padding: 1.85rem;
-    box-sizing: border-box;
   }
 
   .clinic-site:not(.landing-premium) .row.g-4 > .col-md-6.col-lg-4 > .feature-card .feature-icon {
@@ -99,8 +127,70 @@
 }
 
 @media (min-width: 1400px) {
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card,
   .clinic-site:not(.landing-premium) .row.g-4 > .col-md-6.col-lg-4 > .feature-card {
     min-height: 255px;
     padding: 2rem;
+  }
+}
+
+/* Patient portal feature grid: explicit desktop geometry avoids Bootstrap/fallback
+   grid conflicts and keeps each feature card full-width inside its column. */
+@media (min-width: 992px) {
+  .clinic-site:not(.landing-premium) .portal-feature-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    grid-column: auto !important;
+    display: flex;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: 1 1 auto;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card .feature-icon {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    font-size: 1.55rem;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card h5 {
+    font-size: 1.3rem;
+    margin-top: 1.35rem;
+  }
+
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card p {
+    max-width: none;
+    line-height: 1.7;
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 1400px) {
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card {
+    min-height: 300px;
+    padding: 2.15rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .clinic-site:not(.landing-premium) .portal-feature-grid > .col-md-4 > .feature-card {
+    min-height: 0;
   }
 }

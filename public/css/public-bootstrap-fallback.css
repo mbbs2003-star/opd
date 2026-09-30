@@ -28,7 +28,22 @@
 }
 
 .clinic-site [class*="col-"],
-.landing-footer [class*="col-"] { min-width: 0; }
+.landing-footer [class*="col-"] {
+  min-width: 0;
+}
+
+/*
+ * The fallback layout intentionally uses CSS Grid. Bootstrap may still load
+ * afterwards and add percentage widths to .col-* elements; those widths must
+ * not be allowed to shrink a grid item to a fraction of its grid track.
+ * Keep the grid responsible for column sizing on the public site.
+ */
+.clinic-site .row > [class*="col-"] {
+  width: auto !important;
+  max-width: none !important;
+  flex: none !important;
+  min-width: 0;
+}
 
 .clinic-site .col-6 { grid-column: span 6; }
 .clinic-site .col-12 { grid-column: span 12; }
