@@ -1,4 +1,4 @@
-const CACHE='chhayabithi-hms-v10';
+const CACHE='chhayabithi-hms-v11';
 const STATIC_ASSETS=[
   '/css/style.css',
   '/css/public-bootstrap-fallback.css',
