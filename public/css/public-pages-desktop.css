@@ -1,0 +1,73 @@
+/* Chhayabithi public desktop refinement */
+.clinic-site:not(.landing-premium){min-height:calc(100vh - 72px);background:linear-gradient(180deg,#f7fbfa 0%,#f3f8f7 100%)}
+.clinic-site:not(.landing-premium) .clinic-section{padding:clamp(4.5rem,6vw,6.5rem) 0}
+.clinic-site:not(.landing-premium) .clinic-section>.container{max-width:1200px}
+.clinic-site:not(.landing-premium) .section-heading{align-items:flex-end;margin-bottom:2.5rem;gap:2rem}
+.clinic-site:not(.landing-premium) .section-heading h1,.clinic-site:not(.landing-premium) .portal-callout h1{font-size:clamp(2.55rem,4.4vw,4.35rem);line-height:1.03;letter-spacing:-.055em}
+.clinic-site:not(.landing-premium) .section-heading p{max-width:680px;font-size:1rem;line-height:1.7}
+.clinic-site:not(.landing-premium) .feature-card,.clinic-site:not(.landing-premium) .doctor-profile-card,.clinic-site:not(.landing-premium) .queue-card,.clinic-site:not(.landing-premium) .live-counter,.clinic-site:not(.landing-premium) .live-now-card{border-color:#dcebe8;box-shadow:0 16px 42px rgba(18,73,68,.07)}
+.clinic-site:not(.landing-premium) .feature-card{min-height:205px;padding:1.7rem;display:flex;flex-direction:column}
+.clinic-site:not(.landing-premium) .feature-card p{line-height:1.7}
+.clinic-site:not(.landing-premium) .feature-card span{margin-top:auto;padding-top:1rem}
+.clinic-site:not(.landing-premium) .doctor-profile-card{min-height:150px;padding:1.45rem}
+.clinic-site:not(.landing-premium) .doctor-profile-card h5{font-size:1.05rem}
+.clinic-site:not(.landing-premium) .portal-callout{position:relative;overflow:hidden;padding:3.5rem 3.75rem;background:linear-gradient(135deg,#e9f8f4 0%,#f8fcfb 68%)}
+.clinic-site:not(.landing-premium) .portal-callout:after{content:"";position:absolute;width:280px;height:280px;right:-100px;top:-140px;border-radius:50%;background:rgba(13,119,112,.08);pointer-events:none}
+.clinic-site:not(.landing-premium) .portal-callout>div{position:relative;z-index:1;max-width:760px}
+.clinic-site:not(.landing-premium) .portal-callout>.btn{position:relative;z-index:1;flex:0 0 auto}
+.clinic-site:not(.landing-premium) .live-hero{padding:1.4rem 0!important;background:linear-gradient(135deg,#063f3f 0%,#0d6e6e 62%,#168b7d 100%);box-shadow:0 12px 35px rgba(4,63,63,.12)}
+.clinic-site:not(.landing-premium) .live-hero .container{max-width:1200px}
+.clinic-site:not(.landing-premium) .live-now-card{padding:2.5rem}
+.clinic-site:not(.landing-premium) .live-counter{min-height:125px;display:flex;flex-direction:column;justify-content:center}
+.clinic-site:not(.landing-premium) .queue-card{min-height:390px}
+.clinic-site:not(.landing-premium) .live-hero h1{font-size:clamp(2.2rem,4vw,3.5rem);letter-spacing:-.045em}
+.clinic-site:not(.landing-premium) .hero-eyebrow{font-size:.7rem}
+
+.landing-premium .landing-hero-premium__bg{background:linear-gradient(90deg,rgba(2,25,29,.94) 0%,rgba(3,48,52,.82) 46%,rgba(3,48,52,.48) 100%),url('https://images.pexels.com/photos/6129681/pexels-photo-6129681.jpeg?auto=compress&dpr=1&w=2200') center/cover no-repeat!important}
+.landing-premium .landing-hero-premium{min-height:690px}
+.landing-premium .landing-hero-premium__inner{padding-top:6.5rem;padding-bottom:7rem}
+.landing-premium .landing-hero-premium h1{text-shadow:0 3px 24px rgba(0,0,0,.22)}
+
+@media(min-width:1200px){
+ .landing-topbar .container{max-width:1240px}
+ .landing-topbar .brand{min-width:128px}
+ .landing-topbar .brand-mark{width:112px;height:56px;flex-basis:112px;border-radius:.65rem;background:transparent}
+ .landing-topbar .brand-mark img{padding:0;object-fit:contain}
+ .landing-topbar .brand-name{display:none}
+ .public-desktop-nav{gap:.2rem}
+ .public-desktop-nav a{font-size:.78rem!important;padding:.62rem .72rem!important}
+ .landing-nav-actions .btn{font-size:.72rem;padding:.5rem .75rem}
+ .landing-premium .landing-hero-premium__inner{padding-top:7rem;padding-bottom:7.5rem}
+ .landing-premium .landing-hero-premium>.landing-hero-premium__inner>.row{min-height:520px}
+ .landing-premium .landing-hero-visual{max-width:480px;margin-left:auto}
+}
+@media(min-width:992px) and (max-width:1199.98px){
+ .landing-topbar .container{max-width:960px}
+ .landing-topbar .brand{min-width:100px}
+ .landing-topbar .brand-mark{width:94px;height:47px;flex-basis:94px;background:transparent}
+ .landing-topbar .brand-mark img{padding:0}
+ .landing-topbar .brand-name{display:none}
+ .public-desktop-nav{gap:0}
+ .public-desktop-nav a{font-size:.69rem!important;padding:.5rem .42rem!important}
+ .landing-nav-actions .btn{font-size:.65rem;padding:.42rem .52rem}
+ .clinic-site:not(.landing-premium) .clinic-section>.container,.clinic-site:not(.landing-premium) .live-hero .container{max-width:960px}
+ .clinic-site:not(.landing-premium) .clinic-section{padding:5rem 0}
+}
+@media(max-width:991.98px){
+ .landing-topbar .brand-mark{width:96px;height:48px;flex-basis:96px;background:transparent}
+ .landing-topbar .brand-mark img{padding:0}
+ .landing-topbar .brand-name{display:none}
+ .landing-premium .landing-hero-premium{min-height:auto}
+ .landing-premium .landing-hero-premium__bg{background:linear-gradient(180deg,rgba(2,25,29,.9),rgba(3,48,52,.86)),url('https://images.pexels.com/photos/6129681/pexels-photo-6129681.jpeg?auto=compress&dpr=1&w=1400') center/cover no-repeat!important}
+}
+@media(max-width:767.98px){
+ .clinic-site:not(.landing-premium) .clinic-section{padding:3.75rem 0}
+ .clinic-site:not(.landing-premium) .section-heading{margin-bottom:1.75rem}
+ .clinic-site:not(.landing-premium) .feature-card{min-height:0;padding:1.35rem}
+ .clinic-site:not(.landing-premium) .portal-callout{padding:1.5rem}
+ .clinic-site:not(.landing-premium) .portal-callout h1{font-size:2.2rem}
+ .clinic-site:not(.landing-premium) .live-now-card{padding:1.25rem}
+}
+@media(max-width:575.98px){
+ .landing-topbar .brand-mark{width:82px;height:41px;flex-basis:82px}
+}
