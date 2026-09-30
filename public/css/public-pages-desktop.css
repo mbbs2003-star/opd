@@ -71,13 +71,41 @@
 @media(max-width:575.98px){
  .landing-topbar .brand-mark{width:82px;height:41px;flex-basis:82px}
 }
-/* Services feature cards: keep the three-column desktop grid visually balanced. */
+/* Desktop feature cards: force the card to fill its Bootstrap column.
+   This prevents narrow content-width cards when a parent column is flex-aligned. */
 @media (min-width: 992px) {
+  .clinic-site:not(.landing-premium) .row.g-4 > [class*="col-"] > .feature-card {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card {
+    min-height: 240px;
+    padding: 1.85rem;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card .feature-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 1.4rem;
+    flex: 0 0 52px;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card h5 {
+    font-size: 1.15rem;
+    margin-top: 1.2rem;
+  }
+
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card p {
+    max-width: 34rem;
+    margin-bottom: 0;
+  }
+
   .clinic-site:not(.landing-premium) .row.g-4 > .col-md-6.col-lg-4 > .feature-card {
     min-height: 240px;
-    width: 100%;
     padding: 1.85rem;
-    box-sizing: border-box;
   }
 
   .clinic-site:not(.landing-premium) .row.g-4 > .col-md-6.col-lg-4 > .feature-card .feature-icon {
@@ -99,6 +127,7 @@
 }
 
 @media (min-width: 1400px) {
+  .clinic-site:not(.landing-premium) .row.g-4 > .col-md-4 > .feature-card,
   .clinic-site:not(.landing-premium) .row.g-4 > .col-md-6.col-lg-4 > .feature-card {
     min-height: 255px;
     padding: 2rem;
