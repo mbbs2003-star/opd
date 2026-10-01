@@ -14,6 +14,7 @@ const rateLimit = require('express-rate-limit');
 
 const appConfig = require('./config/appConfig');
 const { attachUser } = require('./middleware/auth');
+const { maintenanceGate } = require('./middleware/maintenance');
 const { attachClientIp } = require('./middleware/audit');
 const { exposeCsrfToken } = require('./middleware/csrf');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
@@ -113,6 +114,12 @@ app.use(async (req, res, next) => {
   }
   next();
 });
+
+// ---- Global maintenance gate -----------------------------------------
+// Runs after session/user loading so SUPER_ADMIN can bypass maintenance.
+// Auth login/logout/reset remain reachable so a Super Admin can enter the
+// system and disable maintenance mode.
+app.use(maintenanceGate);
 
 // ---- Rate limiting for auth ------------------------------------------
 const loginLimiter = rateLimit({
