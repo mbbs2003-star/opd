@@ -4,6 +4,7 @@ const healthIdService = require('./healthIdService');
 const aadhaarUtil = require('../utils/aadhaarUtil');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const labService = require('./labService');
 
 /** Registration Number format: REG-YY-BB-NNNNNN */
 async function generateRegistrationNumber(conn, branchCode, at = new Date()) {
@@ -267,7 +268,8 @@ async function getPatientProfile(healthIdOrId) {
     { id: patient.id }
   );
 
-  return { patient, opdHistory, prescriptions, billing, prescriptionAttachments };
+  const labOrders = await labService.patientOrders(patient.id);
+  return { patient, opdHistory, prescriptions, billing, prescriptionAttachments, labOrders };
 }
 
 /**
