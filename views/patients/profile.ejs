@@ -148,6 +148,14 @@
   </div>
 </div>
 
+<div class="card mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-eyedropper"></i> Laboratory & Diagnostic Records</span><a href="/lab/orders/new?healthId=<%= encodeURIComponent(patient.health_id) %>" class="btn btn-sm btn-outline-primary">Book Test</a></div>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Order</th><th>Tests</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>
+  <% (labOrders || []).forEach(function(o){ %><tr><td><strong><%= o.order_code %></strong></td><td><%= o.total_tests %> test(s) · <%= o.reported_tests||0 %> reported</td><td><span class="badge text-bg-<%= o.status==='REPORTED'?'success':(o.status==='CANCELLED'?'secondary':'primary') %>"><%= o.status.replaceAll('_',' ') %></span></td><td><%= new Date(o.booking_date).toLocaleDateString() %></td><td><a href="/lab/orders/<%= o.id %>" class="btn btn-sm btn-outline-primary">Open</a></td></tr><% }) %>
+  <% if (!(labOrders || []).length) { %><tr><td colspan="5" class="text-center text-muted py-3">No laboratory or diagnostic records.</td></tr><% } %>
+  </tbody></table></div>
+</div>
+
 <div class="modal fade" id="suspendModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="POST" action="/patients/<%= patient.health_id %>/suspend" class="modal-content">
