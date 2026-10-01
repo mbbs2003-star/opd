@@ -29,12 +29,14 @@ function describeItem(item) {
   const frequency = FREQUENCY[frequencyKey] || { en: String(item.frequency || '').trim(), bn: String(item.frequency || '').trim() };
   const routeKey = normalizeKey(item.route);
   const route = ROUTE[routeKey] || { en: String(item.route || '').trim(), bn: String(item.route || '').trim() };
-  const duration = String(item.duration || '').trim();
+  const rawDuration = String(item.duration || '').trim();
+  const duration = /^\d+(\.\d+)?$/.test(rawDuration) ? rawDuration + ' days' : rawDuration;
   const instructions = String(item.instructions || '').trim();
   const food = /before food|before meal|a\/c|\bac\b/i.test(instructions) ? { en: 'before food', bn: 'খাবারের আগে' } : /after food|after meal|p\/c|\bpc\b/i.test(instructions) ? { en: 'after food', bn: 'খাবারের পরে' } : /with food/i.test(instructions) ? { en: 'with food', bn: 'খাবারের সঙ্গে' } : null;
   const doseText = /^\d+(\.\d+)?$/.test(dose) ? numberWord(dose) : dose;
   const english = ('Take ' + doseText + ' ' + form.en + (route.en ? ' ' + route.en : '') + ' ' + frequency.en + (duration ? ' for ' + duration : '') + (food ? ' ' + food.en : '') + '.').replace(/\s+/g, ' ').trim();
-  const bengali = (bengaliNumber(dose) + ' ' + form.bn + (route.bn ? ' ' + route.bn : '') + ', ' + frequency.bn + (duration ? ' ' + duration + ' দিন' : '') + (food ? ', ' + food.bn : '') + '।').replace(/\s+/g, ' ').trim();
+  const bnDuration = rawDuration && /^\d+(\.\d+)?$/.test(rawDuration) ? ' ' + rawDuration + ' দিন' : (duration ? ' ' + duration : '');
+  const bengali = (bengaliNumber(dose) + ' ' + form.bn + (route.bn ? ' ' + route.bn : '') + ', ' + frequency.bn + bnDuration + (food ? ', ' + food.bn : '') + '।').replace(/\s+/g, ' ').trim();
   return { english, bengali };
 }
 function buildPrescriptionInstructions(item) {
