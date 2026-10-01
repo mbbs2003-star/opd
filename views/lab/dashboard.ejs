@@ -1,0 +1,26 @@
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div><h4 class="mb-0">Laboratory & Diagnostic Centre</h4><div class="text-muted small">LIS operations dashboard</div></div>
+  <div class="d-flex gap-2"><a href="/lab/orders/new" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle"></i> New Order</a><a href="/lab/tests" class="btn btn-outline-secondary btn-sm">Test Master</a></div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Total Orders</div><div class="fs-3 fw-bold"><%= stats.total %></div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Awaiting / Booked</div><div class="fs-3 fw-bold"><%= stats.ordered %></div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Processing</div><div class="fs-3 fw-bold"><%= stats.processing %></div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Reported</div><div class="fs-3 fw-bold"><%= stats.reported %></div></div></div></div>
+</div>
+<div class="card">
+  <div class="card-header d-flex justify-content-between"><strong>Recent Laboratory Orders</strong><a href="/lab/orders">View all</a></div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Order</th><th>Patient</th><th>Tests</th><th>Source</th><th>Status</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+    <% orders.forEach(function(o){ %><tr>
+      <td><strong><%= o.order_code %></strong></td><td><%= o.patient_name %><div class="small text-muted"><%= o.health_id %></div></td>
+      <td><%= o.total_tests %> <% if(o.reported_tests){ %><span class="text-muted">/ <%= o.reported_tests %> reported</span><% } %></td>
+      <td><span class="badge text-bg-light border"><%= o.source %></span></td>
+      <td><span class="badge text-bg-<%= o.status==='REPORTED'?'success':(o.status==='CANCELLED'?'secondary':'primary') %>"><%= o.status.replaceAll('_',' ') %></span></td>
+      <td><%= new Date(o.created_at).toLocaleString() %></td><td><a href="/lab/orders/<%= o.id %>" class="btn btn-sm btn-outline-primary">Open</a></td>
+    </tr><% }) %>
+    <% if(!orders.length){ %><tr><td colspan="7" class="text-center text-muted py-4">No laboratory orders yet.</td></tr><% } %>
+    </tbody>
+  </table></div>
+</div>
