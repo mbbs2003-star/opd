@@ -66,6 +66,46 @@ async function updateTest(testId,payload,actorUserId) {
   });
 }
 
+async function saveTestParameters(testId,payload,actorUserId) {
+  return withTransaction(async (conn) => {
+    const [[test]] = await conn.execute('SELECT id FROM lab_tests WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:testId});
+    if (!test) throw new AppError('Laboratory test not found',404);
+    const ids = Array.isArray(payload.parameterId) ? payload.parameterId : (payload.parameterId ? [payload.parameterId] : []);
+    const names = Array.isArray(payload.parameterName) ? payload.parameterName : (payload.parameterName ? [payload.parameterName] : []);
+    const codes = Array.isArray(payload.parameterCode) ? payload.parameterCode : (payload.parameterCode ? [payload.parameterCode] : []);
+    const types = Array.isArray(payload.parameterType) ? payload.parameterType : (payload.parameterType ? [payload.parameterType] : []);
+    const units = Array.isArray(payload.parameterUnit) ? payload.parameterUnit : (payload.parameterUnit ? [payload.parameterUnit] : []);
+    const refs = Array.isArray(payload.referenceRange) ? payload.referenceRange : (payload.referenceRange ? [payload.referenceRange] : []);
+    const lows = Array.isArray(payload.criticalLow) ? payload.criticalLow : (payload.criticalLow ? [payload.criticalLow] : []);
+    const highs = Array.isArray(payload.criticalHigh) ? payload.criticalHigh : (payload.criticalHigh ? [payload.criticalHigh] : []);
+    const kept=[];
+    for(let i=0;i<names.length;i++){
+      const name=String(names[i]||'').trim(); if(!name) continue;
+      const id=Number(ids[i]||0); const code=String(codes[i]||('P'+(i+1))).trim().toUpperCase();
+      const dataType=['TEXT','NUMERIC','POSITIVE_NEGATIVE','SELECT','BOOLEAN'].includes(types[i])?types[i]:'TEXT';
+      const unit=String(units[i]||'').trim()||null;
+      const range=String(refs[i]||'').trim()||null;
+      const low=lows[i]!==undefined&&lows[i]!==''?Number(lows[i]):null;
+      const high=highs[i]!==undefined&&highs[i]!==''?Number(highs[i]):null;
+      if(id){
+        await conn.execute('UPDATE lab_test_parameters SET code=:code,name=:name,data_type=:dataType,unit=:unit,reference_range_text=:rangeText,critical_low=:low,critical_high=:high,is_active=1,sort_order=:sortOrder WHERE id=:id AND test_id=:testId',{id,testId,code,name,dataType,unit,rangeText:range,low,high,sortOrder:i+1});
+        kept.push(id);
+      }else{
+        const [r]=await conn.execute('INSERT INTO lab_test_parameters (test_id,code,name,data_type,unit,reference_range_text,critical_low,critical_high,sort_order,is_active) VALUES (:testId,:code,:name,:dataType,:unit,:rangeText,:low,:high,:sortOrder,1)',{testId,code,name,dataType,unit,rangeText:range,low,high,sortOrder:i+1});
+        kept.push(r.insertId);
+      }
+    }
+    if(kept.length){
+      const placeholders=kept.map((_,i)=>':p'+i).join(',');
+      const params={testId}; kept.forEach((id,i)=>params['p'+i]=id);
+      await conn.execute('UPDATE lab_test_parameters SET is_active=0 WHERE test_id=:testId AND id NOT IN ('+placeholders+')',params);
+    }else{
+      await conn.execute('UPDATE lab_test_parameters SET is_active=0 WHERE test_id=:testId',{testId});
+    }
+    await auditService.log({userId:actorUserId,action:'LAB_TEST_PARAMETERS_UPDATED',entity:'lab_test',entityId:testId,newValue:{parameterCount:kept.length}},conn);
+  });
+}
+
 async function createOrder(patientId,branchId,actorUserId,payload={}) {
   return withTransaction(async conn=>{
     const [[patient]]=await conn.execute('SELECT id,name,health_id,branch_id FROM patients WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:patientId});
@@ -266,4 +306,4 @@ async function recalcOrder(conn,orderId) {
   await conn.execute('UPDATE lab_orders SET status=:status WHERE id=:id',{status,id:orderId});
 }
 
-module.exports={getLaboratoryForBranch,getAvailableTestsForBranch,listTests,getTest,createTest,updateTest,createOrder,syncDoctorRequestedTests,listOrders,getOrder,collectSample,receiveSample,rejectSample,getResult,saveResult,verifyResult,releaseResult,attachReportFile,cancelOrder,patientOrders,patientReport};
+module.exports={getLaboratoryForBranch,getAvailableTestsForBranch,listTests,getTest,createTest,updateTest,saveTestParameters,createOrder,syncDoctorRequestedTests,listOrders,getOrder,collectSample,receiveSample,rejectSample,getResult,saveResult,verifyResult,releaseResult,attachReportFile,cancelOrder,patientOrders,patientReport};
