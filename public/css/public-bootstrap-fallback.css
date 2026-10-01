@@ -107,8 +107,12 @@
   .clinic-site .col-lg-3,
   .clinic-site .col-lg-4,
   .clinic-site .col-lg-5,
-  .clinic-site .col-lg-7 { grid-column: span 12; }
+  .clinic-site .col-lg-7 { width: 100%; }
   .clinic-site .g-5 { gap: 1.5rem; }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .clinic-site .col-md-6 { width: calc((100% - 1.5rem) / 2); }
+  .clinic-site .col-md-4 { width: calc((100% - 3rem) / 3); }
 }
 
 @media (max-width: 767.98px) {
@@ -123,7 +127,7 @@
 
   .clinic-site .col-6,
   .clinic-site .col-md-6,
-  .clinic-site .col-md-4 { grid-column: span 12; }
+  .clinic-site .col-md-4 { width: 100%; }
 
   .landing-topbar .container {
     display: grid;
