@@ -179,7 +179,7 @@
 
             <datalist id="medicineList">
               <% medicines.forEach(function(m) { %>
-                <option value="<%= m.name %><%= m.strength ? ' ' + m.strength : '' %>"></option>
+                <option value="<%= m.name %>" label="<%= [m.strength, m.composition, m.form].filter(Boolean).join(' · ') %>"></option>
               <% }) %>
             </datalist>
 
