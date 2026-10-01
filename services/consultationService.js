@@ -1,6 +1,7 @@
 const { pool, withTransaction } = require('../config/database');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const labService = require('./labService');
 
 /**
  * Doctor-scope authorization guard. A doctor may only open visits
@@ -133,6 +134,20 @@ async function getConsultationContext(visitId) {
     { visitId }
   );
 
+  const labTests = await labService.getAvailableTestsForBranch(visit.branch_id);
+  const [[labOrder]] = await pool.execute(
+    `SELECT id, order_code, status FROM lab_orders WHERE visit_id = :visitId AND source = 'DOCTOR' ORDER BY id DESC LIMIT 1`,
+    { visitId }
+  );
+  let selectedLabTestIds = [];
+  if (labOrder) {
+    const [selectedRows] = await pool.execute(
+      `SELECT test_id FROM lab_order_items WHERE lab_order_id = :orderId AND status <> 'CANCELLED'`,
+      { orderId: labOrder.id }
+    );
+    selectedLabTestIds = selectedRows.map((r) => Number(r.test_id));
+  }
+
   const { calculatePregnancy } = require('../utils/pregnancyCalculator');
   const pregnancyCalculation = String(visit.gender || '').toLowerCase() === 'female' &&
     visit.pregnancy_status === 'PREGNANT' && visit.lmp_date
@@ -150,7 +165,10 @@ async function getConsultationContext(visitId) {
     pregnancyCalculation,
     complaintSuggestions,
     personalHistory,
-    complementaryRequested: Boolean(personalHistoryRows[0]?.complementary_requested || consultation?.complementary_requested)
+    complementaryRequested: Boolean(personalHistoryRows[0]?.complementary_requested || consultation?.complementary_requested),
+    labTests,
+    labOrder: labOrder || null,
+    selectedLabTestIds
   };
 }
 
@@ -300,6 +318,15 @@ async function saveConsultation(visitId, payload, actorUserId) {
         { id: visitId }
       );
     }
+
+    await labService.syncDoctorRequestedTests(
+      conn,
+      visitId,
+      visit.patient_id,
+      visit.branch_id,
+      Array.isArray(payload.labTestIds) ? payload.labTestIds : (payload.labTestIds ? [payload.labTestIds] : []),
+      actorUserId
+    );
 
     await auditService.log(
       {
