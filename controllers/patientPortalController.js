@@ -123,6 +123,38 @@ async function createAccount(req, res, next) {
   }
 }
 
+
+/** Staff-side: reset the portal password for a specific patient profile. */
+async function resetPassword(req, res, next) {
+  try {
+    const result = await patientPortalService.resetPortalPassword(req.params.patientId, req.user.id);
+
+    req.flash(
+      'success',
+      `Portal password reset for ${result.patientName}. Temporary password: ${result.temporaryPassword} (also emailed if SMTP is configured).`
+    );
+
+    if (result.email) {
+      emailService
+        .notifyPasswordReset({
+          to: result.email,
+          name: result.patientName,
+          email: result.email,
+          temporaryPassword: result.temporaryPassword
+        })
+        .catch(() => {});
+    }
+
+    res.redirect(`/patients/${req.body.healthId || ''}`.replace(/\\/$/, '') || '/patients');
+  } catch (err) {
+    if (err instanceof AppError) {
+      req.flash('errors', [{ message: err.message }]);
+      return res.redirect(`/patients/${req.body.healthId || ''}`);
+    }
+    next(err);
+  }
+}
+
 // ---- Self-service booking ----------------------------------------------
 
 async function showBookForm(req, res, next) {
@@ -256,6 +288,7 @@ module.exports = {
   viewInvoice,
   printReceipt,
   createAccount,
+  resetPassword,
   showBookForm,
   doctorsByDepartment,
   doctorSlots,

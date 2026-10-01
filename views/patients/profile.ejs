@@ -9,9 +9,37 @@
   </div>
   <div class="d-flex gap-2">
     <% if (can('patient.edit') && !suspended) { %><a href="/patients/<%= patient.health_id %>/edit" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Edit</a><% } %>
+    <% if (can('appointment.create') && !suspended) { %><a href="/opd/appointments/new?healthId=<%= encodeURIComponent(patient.health_id) %>" class="btn btn-primary btn-sm"><i class="bi bi-calendar-plus"></i> Book Appointment</a><% } %>
+    <% if (can('patient.create') && !suspended && patient.portal_account_exists) { %><button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetPortalPasswordModal"><i class="bi bi-key"></i> Reset Patient Account Password</button><% } %>
     <a href="/patients/<%= patient.health_id %>/slip" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer"></i> Registration Slip</a>
   </div>
 </div>
+
+<% if (can('patient.create') && !suspended && patient.portal_account_exists) { %>
+<div class="modal fade" id="resetPortalPasswordModal" tabindex="-1" aria-labelledby="resetPortalPasswordLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" action="/patients/<%= patient.id %>/reset-portal-password" class="modal-content">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="healthId" value="<%= patient.health_id %>">
+      <div class="modal-header">
+        <h5 class="modal-title" id="resetPortalPasswordLabel">Reset Patient Account Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Reset the patient portal password for <strong><%= patient.name %></strong>?</p>
+        <div class="alert alert-warning small mb-0">
+          A temporary password will be generated and the patient will be required to choose a new password after signing in.
+          If SMTP is configured, the temporary password will also be emailed to the patient.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-warning"><i class="bi bi-key"></i> Reset Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
 
 <% if (suspended) { %>
   <div class="alert alert-warning d-flex justify-content-between align-items-center">
@@ -130,3 +158,5 @@
     </form>
   </div>
 </div>
+
+
