@@ -66,3 +66,9 @@ body.print-doc {
   body.print-doc { font-size: 12px; }
   @page { margin: 12mm; }
 }
+
+
+.rx-print-item{border:1px solid #dfe8e7;border-radius:8px;padding:10px 12px;margin:0 0 8px;break-inside:avoid}
+.rx-print-item .small{margin-top:3px}
+.rx-instruction-en{margin-top:6px}
+.rx-instruction-bn{margin-top:4px;font-family:"Noto Sans Bengali","Nirmala UI","Vrinda",sans-serif;line-height:1.7}
