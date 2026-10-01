@@ -51,6 +51,9 @@ ALTER TABLE opd_consultations
   ADD COLUMN complementary_requested_at DATETIME NULL AFTER complementary_requested,
   ADD COLUMN complementary_requested_by INT UNSIGNED NULL AFTER complementary_requested_at;
 
+ALTER TABLE opd_consultations
+  ADD CONSTRAINT fk_cons_complementary_user FOREIGN KEY (complementary_requested_by) REFERENCES users(id);
+
 ALTER TABLE medicines
   ADD COLUMN composition VARCHAR(500) NULL AFTER strength;
 
