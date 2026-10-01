@@ -203,7 +203,8 @@ async function getPatientProfile(healthIdOrId) {
     `SELECT p.*, pa.address, pa.village_town, pa.police_station, pa.district, pa.state, pa.pin_code,
             m.blood_group, m.height_cm, m.weight_kg, m.allergies, m.existing_conditions,
             m.emergency_contact, m.emergency_contact_relation,
-            b.name AS branch_name
+            b.name AS branch_name,
+            EXISTS(SELECT 1 FROM users pu WHERE pu.patient_id = p.id AND pu.deleted_at IS NULL) AS portal_account_exists
      FROM patients p
      LEFT JOIN patient_addresses pa ON pa.patient_id = p.id
      LEFT JOIN patient_medical_profiles m ON m.patient_id = p.id
