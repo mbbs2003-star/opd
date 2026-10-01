@@ -454,6 +454,7 @@ FROM laboratories l
 JOIN (
   SELECT 'BLOOD' code, 'Blood Tests' name, 10 sort_order
   UNION ALL SELECT 'URINE', 'Urine Tests', 20
+  UNION ALL SELECT 'SEMEN', 'Semen / Andrology', 25
   UNION ALL SELECT 'STOOL', 'Stool Tests', 30
   UNION ALL SELECT 'BIOCHEM', 'Biochemistry', 40
   UNION ALL SELECT 'HORMONE', 'Hormones / Thyroid', 50
@@ -544,7 +545,7 @@ JOIN (
   UNION ALL SELECT 'SER-VDRL','VDRL / RPR Syphilis Screen','VDRL','LAB','Serum','Plain / gel tube',0,'No special preparation.','Flocculation / immunoassay',1440,300.00,'SER','SEROLOGY'
   UNION ALL SELECT 'SER-ASO','Anti-Streptolysin O','ASO','LAB','Serum','Plain / gel tube',0,'No special preparation.','Latex agglutination',1440,300.00,'SER','SEROLOGY'
   UNION ALL SELECT 'CLP-UPT','Urine Pregnancy Test','UPT','LAB','Urine','Sterile urine container',0,'First-morning urine preferred where clinically appropriate.','Immunochromatography',360,150.00,'CLP','URINE'
-  UNION ALL SELECT 'CLP-SEMINAL','Semen Analysis','Semen Analysis','LAB','Semen','Sterile wide-mouth container',0,'Abstinence and collection instructions as per laboratory protocol; deliver promptly.','Macroscopy + microscopy',720,500.00,'CLP','BLOOD'
+  UNION ALL SELECT 'CLP-SEMINAL','Semen Analysis','Semen Analysis','LAB','Semen','Sterile wide-mouth container',0,'Abstinence and collection instructions as per laboratory protocol; deliver promptly.','Macroscopy + microscopy',720,500.00,'CLP','SEMEN'
   UNION ALL SELECT 'IMG-USG-KUB','USG KUB','USG KUB','USG','N/A','N/A',0,'Preparation according to centre protocol.','Ultrasonography',1440,1000.00,'IMG','USG'
   UNION ALL SELECT 'IMG-USG-OBS','USG Obstetric / Pregnancy Scan','USG Obstetric','USG','N/A','N/A',0,'Preparation and gestational-age requirements depend on scan type.','Ultrasonography',1440,1400.00,'IMG','USG'
   UNION ALL SELECT 'IMG-USG-THY','USG Thyroid','USG Thyroid','USG','N/A','N/A',0,'No special preparation usually required.','Ultrasonography',1440,900.00,'IMG','USG'
