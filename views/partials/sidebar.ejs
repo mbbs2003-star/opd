@@ -18,6 +18,7 @@
   <% if (isPatientPortal) { %>
     <ul class="nav flex-column hms-nav">
       <li class="nav-item"><a class="nav-link <%= active('/patient-portal') %>" href="/patient-portal"><i class="bi bi-person-heart"></i> My Health Record</a></li>
+      <li class="nav-item"><a class="nav-link <%= active('/patient-portal/lab') %>" href="/patient-portal/lab"><i class="bi bi-eyedropper"></i> Laboratory & Diagnostics</a></li>
     </ul>
   <% } else { %>
   <ul class="nav flex-column hms-nav">
@@ -51,6 +52,12 @@
     <% if (can('doctor.manage') || can('doctor.schedule.manage')) { %>
       <li class="nav-section">Doctors</li>
       <li class="nav-item"><a class="nav-link <%= active('/doctors') %>" href="/doctors"><i class="bi bi-clipboard2-pulse"></i> Doctors</a></li>
+    <% } %>
+
+    <% if (can('lab.view')) { %>
+      <li class="nav-section">Laboratory & Diagnostics</li>
+      <li class="nav-item"><a class="nav-link <%= active('/lab') %>" href="/lab"><i class="bi bi-eyedropper"></i> Laboratory / LIS</a></li>
+      <% if (can('lab.manage')) { %><li class="nav-item"><a class="nav-link <%= active('/lab/tests') %>" href="/lab/tests"><i class="bi bi-list-check"></i> Test Master</a></li><% } %>
     <% } %>
 
     <% if (can('billing.view') || can('discount.approve')) { %>

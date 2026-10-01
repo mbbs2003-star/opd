@@ -59,6 +59,28 @@ async function createInvoice(visitId, otherCharges, actorUserId) {
         items.push({ description: c.description, item_type: 'OTHER', amount: Number(c.amount) });
       }
     });
+
+    // Doctor/reception laboratory referrals attached to this OPD visit are
+    // billed with the same invoice. Cancelled tests are never charged.
+    const [labItems] = await conn.execute(
+      `SELECT oi.id, oi.lab_order_id, oi.test_name_snapshot, oi.price_snapshot
+       FROM lab_order_items oi
+       JOIN lab_orders lo ON lo.id = oi.lab_order_id
+       WHERE lo.visit_id = :visitId
+         AND lo.status <> 'CANCELLED'
+         AND oi.status NOT IN ('CANCELLED','REJECTED')`,
+      { visitId }
+    );
+    for (const labItem of labItems) {
+      if (Number(labItem.price_snapshot) > 0) {
+        items.push({
+          description: 'Laboratory / Diagnostic — ' + labItem.test_name_snapshot,
+          item_type: 'OTHER',
+          amount: Number(labItem.price_snapshot)
+        });
+      }
+    }
+
     const grossAmount = items.reduce((sum, i) => sum + i.amount, 0);
 
     const [result] = await conn.execute(
@@ -108,6 +130,14 @@ async function createInvoice(visitId, otherCharges, actorUserId) {
       await conn.execute(
         'INSERT INTO invoice_items (invoice_id, description, item_type, amount) VALUES (:invoiceId, :description, :itemType, :amount)',
         { invoiceId, description: item.description, itemType: item.item_type, amount: item.amount }
+      );
+    }
+
+    if (labItems.length) {
+      await conn.execute(
+        `UPDATE lab_orders SET payment_status = 'UNPAID'
+         WHERE visit_id = :visitId AND status <> 'CANCELLED'`,
+        { visitId }
       );
     }
 
@@ -370,6 +400,14 @@ async function recordPayment(invoiceId, payload, actorUserId) {
     );
 
     await conn.execute("UPDATE invoices SET status = 'PAID' WHERE id = :id", { id: invoiceId });
+
+    if (invoice.visit_id) {
+      await conn.execute(
+        `UPDATE lab_orders SET payment_status = 'PAID'
+         WHERE visit_id = :visitId AND status <> 'CANCELLED'`,
+        { visitId: invoice.visit_id }
+      );
+    }
 
     await auditService.log(
       {

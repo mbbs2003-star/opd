@@ -11,6 +11,13 @@ router.use(requirePermission('patient.portal.access'));
 
 router.get('/', asyncHandler(patientPortalController.dashboard));
 router.get('/book', asyncHandler(patientPortalController.showBookForm));
+router.get('/lab', asyncHandler(patientPortalController.showLab));
+router.post('/lab/book', csrfProtection, asyncHandler(patientPortalController.bookLab));
+router.get('/lab/orders/:id', asyncHandler(patientPortalController.viewLabOrder));
+router.post('/lab/orders/:id/cancel', csrfProtection, asyncHandler(patientPortalController.cancelLabOrder));
+router.get('/lab/reports/:id', asyncHandler(patientPortalController.viewLabReport));
+router.get('/lab/reports/:id/print', asyncHandler(patientPortalController.printLabReport));
+router.get('/lab/reports/:id/file', asyncHandler(patientPortalController.downloadLabReportFile));
 router.get('/book/doctors', asyncHandler(patientPortalController.doctorsByDepartment));
 router.get('/book/doctors/:doctorId/slots', asyncHandler(patientPortalController.doctorSlots));
 router.post('/book', csrfProtection, asyncHandler(patientPortalController.book));

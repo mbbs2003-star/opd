@@ -148,6 +148,40 @@
           <label class="form-label">Clinical Notes</label>
           <textarea name="clinicalNotes" class="form-control" rows="3" <%= isFinalized ? 'readonly' : '' %>><%= c.clinical_notes || '' %></textarea>
         </div>
+        <div class="card border-primary-subtle bg-light-subtle mt-4 mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clipboard2-pulse me-1"></i><strong>Laboratory & Diagnostic Centre</strong></span>
+            <% if (labOrder) { %><span class="badge text-bg-primary"><%= labOrder.order_code %> · <%= labOrder.status.replaceAll('_',' ') %></span><% } %>
+          </div>
+          <div class="card-body">
+            <% if (!labTests || !labTests.length) { %>
+              <div class="alert alert-warning mb-0">No active laboratory/diagnostic tests are configured for this branch.</div>
+            <% } else { %>
+              <p class="small text-muted mb-3">Select tests available at Chhayabithi Laboratory & Diagnostic Centre. Selected tests are automatically referred into the LIS and become visible in the patient's portal. The patient can cancel the referral if they choose not to perform it here.</p>
+              <div class="row g-2">
+                <% labTests.forEach(function(test) { %>
+                  <div class="col-md-6 col-xl-4">
+                    <label class="border rounded p-2 d-flex gap-2 align-items-start h-100 bg-white">
+                      <input class="form-check-input mt-1" type="checkbox" name="labTestIds" value="<%= test.id %>"
+                             <%= selectedLabTestIds && selectedLabTestIds.includes(Number(test.id)) ? 'checked' : '' %>
+                             <%= isFinalized ? 'disabled' : '' %>>
+                      <span>
+                        <strong class="d-block"><%= test.name %></strong>
+                        <small class="text-muted"><%= test.code %> · <%= test.test_type %> · ₹<%= Number(test.price || 0).toFixed(2) %></small>
+                        <% if (test.fasting_required) { %><span class="badge text-bg-warning ms-1">Fasting</span><% } %>
+                        <% if (test.category_name) { %><small class="d-block text-muted"><%= test.category_name %></small><% } %>
+                      </span>
+                    </label>
+                  </div>
+                <% }) %>
+              </div>
+              <% if (!isFinalized) { %>
+                <div class="small text-muted mt-3"><i class="bi bi-info-circle me-1"></i>Saving the consultation updates the LIS referral. Tests already collected or processed are not silently cancelled.</div>
+              <% } %>
+            <% } %>
+          </div>
+        </div>
+
         <div class="row g-3">
           <div class="col-md-8">
             <label class="form-label">Investigation Advice</label>

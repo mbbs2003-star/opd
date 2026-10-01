@@ -1,0 +1,18 @@
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div><h4 class="mb-0">Laboratory Orders</h4><div class="text-muted small">Accession, sample and reporting workflow</div></div>
+  <a href="/lab/orders/new" class="btn btn-primary btn-sm">New Order</a>
+</div>
+<form class="card card-body mb-3" method="GET"><div class="row g-2">
+  <div class="col-md-5"><input name="q" class="form-control" placeholder="Order code, Health ID or patient name" value="<%= filters.q || '' %>"></div>
+  <div class="col-md-3"><select name="status" class="form-select"><option value="">All statuses</option><% ['ORDERED','BOOKED','PROCESSING','PARTIALLY_REPORTED','REPORTED','CANCELLED'].forEach(function(s){ %><option value="<%= s %>" <%= filters.status===s?'selected':'' %>><%= s.replaceAll('_',' ') %></option><% }) %></select></div>
+  <div class="col-md-2"><button class="btn btn-outline-primary w-100">Filter</button></div>
+</div></form>
+<div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+<thead><tr><th>Order</th><th>Patient</th><th>Tests</th><th>Source</th><th>Amount</th><th>Status</th><th>Booked</th><th></th></tr></thead>
+<tbody><% orders.forEach(function(o){ %><tr>
+<td><strong><%= o.order_code %></strong></td><td><%= o.patient_name %><div class="small text-muted"><%= o.health_id %></div></td>
+<td><%= o.total_tests %> <small class="text-muted"><%= o.reported_tests||0 %> reported</small></td><td><%= o.source %></td><td>₹<%= Number(o.net_amount||0).toFixed(2) %></td>
+<td><span class="badge text-bg-<%= o.status==='REPORTED'?'success':(o.status==='CANCELLED'?'secondary':'primary') %>"><%= o.status.replaceAll('_',' ') %></span></td>
+<td><%= new Date(o.booking_date).toLocaleDateString() %></td><td><a href="/lab/orders/<%= o.id %>" class="btn btn-sm btn-outline-primary">Open</a></td>
+</tr><% }) %><% if(!orders.length){ %><tr><td colspan="8" class="text-center text-muted py-4">No matching orders.</td></tr><% } %></tbody>
+</table></div></div>

@@ -5,6 +5,7 @@ const auditService = require('./auditService');
 const settingsService = require('./settingsService');
 const patientService = require('./patientService');
 const AppError = require('../utils/AppError');
+const labService = require('./labService');
 
 /**
  * Deterministic default password for portal accounts auto-created at
@@ -217,7 +218,9 @@ async function getOwnDashboard(patientId) {
     { id: patientId }
   );
 
-  return { patient, upcoming, history, prescriptions, invoices };
+  const labOrders = await labService.patientOrders(patientId);
+
+  return { patient, upcoming, history, prescriptions, invoices, labOrders };
 }
 
 /**

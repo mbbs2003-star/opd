@@ -8,7 +8,7 @@ const asyncHandler = require('../utils/asyncHandler');
 router.use(requireAuth);
 router.get(
   '/',
-  requirePermission('patient.view', 'queue.manage', 'consultation.create', 'billing.view'),
+  requirePermission('patient.view', 'queue.manage', 'consultation.create', 'billing.view', 'lab.view'),
   asyncHandler(scanController.resolve)
 );
 
