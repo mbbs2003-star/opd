@@ -163,7 +163,7 @@ async function syncDoctorRequestedTests(conn,visitId,patientId,branchId,selected
   }
   const keep=new Set(ids.map(Number));
   for(const item of existing) if(!keep.has(Number(item.test_id)) && ['ORDERED','BOOKED'].includes(item.status)) await conn.execute('UPDATE lab_order_items SET status="CANCELLED",cancellation_reason="Doctor removed the test request" WHERE id=:id',{id:item.id});
-  await recalcOrder(conn,order.id);
+  await recalcOrder(conn,order.id,actorUserId);
   await auditService.log({userId:actorUserId,action:'LAB_DOCTOR_REFERRAL_SYNCED',entity:'lab_order',entityId:order.id,newValue:{selectedTestIds:ids}},conn);
   return {orderId:order.id,count:ids.length};
 }
@@ -194,7 +194,7 @@ async function collectSample(itemId,actorUserId,payload={}) {
     if(existing){sampleCode=existing.sample_code;barcode=existing.barcode_value;await conn.execute('UPDATE lab_samples SET status="COLLECTED",collected_at=NOW(),collected_by=:userId,specimen_type=:specimen,container_type=:container,volume=:volume WHERE id=:id',{id:existing.id,userId:actorUserId,specimen:payload.specimenType||item.specimen_type_snapshot||'Sample',container:payload.containerType||null,volume:payload.volume||null});}
     else{const seq=await sequenceService.nextValue(conn,'lab-sample:'+new Date().getFullYear()+':'+item.lab_order_id);sampleCode='SMP'+new Date().getFullYear()+sequenceService.pad(seq,6);barcode='CHB'+new Date().getFullYear()+sequenceService.pad(seq,8);await conn.execute('INSERT INTO lab_samples (sample_code,barcode_value,lab_order_item_id,specimen_type,container_type,volume,collected_at,collected_by,status) VALUES (:sampleCode,:barcode,:itemId,:specimen,:container,:volume,NOW(),:userId,"COLLECTED")',{sampleCode,barcode,itemId,specimen:payload.specimenType||item.specimen_type_snapshot||'Sample',container:payload.containerType||null,volume:payload.volume||null,userId:actorUserId});}
     await conn.execute('UPDATE lab_order_items SET status="COLLECTED" WHERE id=:id',{id:itemId});
-    await recalcOrder(conn,item.lab_order_id);
+    await recalcOrder(conn,item.lab_order_id,actorUserId);
     await auditService.log({userId:actorUserId,action:'LAB_SAMPLE_COLLECTED',entity:'lab_order_item',entityId:itemId,newValue:{sampleCode,barcode}},conn);
     return {sampleCode,barcode};
   });
@@ -207,7 +207,7 @@ async function receiveSample(itemId,actorUserId) {
     if(s.status==='REJECTED')throw new AppError('Sample already rejected',409);
     await conn.execute('UPDATE lab_samples SET status="RECEIVED",received_at=NOW(),received_by=:userId WHERE id=:id',{id:s.id,userId:actorUserId});
     await conn.execute('UPDATE lab_order_items SET status="RECEIVED" WHERE id=:id',{id:itemId});
-    await recalcOrder(conn,s.lab_order_id);
+    await recalcOrder(conn,s.lab_order_id,actorUserId);
   });
 }
 
@@ -299,11 +299,20 @@ async function patientReport(resultId,patientId) {
   return data && Number(data.result.patient_id)===Number(patientId) && data.result.status==='RELEASED' ? data : null;
 }
 
-async function recalcOrder(conn,orderId) {
+async function recalcOrder(conn,orderId,actorUserId=null) {
   const [[s]]=await conn.execute('SELECT COUNT(*) total,SUM(status="REPORTED") reported,SUM(status IN ("CANCELLED","REJECTED")) closed,SUM(status IN ("COLLECTED","RECEIVED","PROCESSING","RESULT_ENTERED","VERIFIED")) processing FROM lab_order_items WHERE lab_order_id=:id',{id:orderId});
   const total=Number(s.total||0),reported=Number(s.reported||0),closed=Number(s.closed||0),processing=Number(s.processing||0);
   let status='ORDERED';if(!total||closed===total)status='CANCELLED';else if(reported===total)status='REPORTED';else if(reported>0)status='PARTIALLY_REPORTED';else if(processing>0)status='PROCESSING';else{const [[o]]=await conn.execute('SELECT status FROM lab_orders WHERE id=:id',{id:orderId});status=o&&o.status==='BOOKED'?'BOOKED':'ORDERED';}
-  await conn.execute('UPDATE lab_orders SET status=:status WHERE id=:id',{status,id:orderId});
+  const [[currentOrder]] = await conn.execute('SELECT status FROM lab_orders WHERE id=:id FOR UPDATE',{id:orderId});
+  if(currentOrder && currentOrder.status !== status){
+    await conn.execute('UPDATE lab_orders SET status=:status WHERE id=:id',{status,id:orderId});
+    if(actorUserId){
+      await conn.execute(
+        'INSERT INTO lab_order_status_history (lab_order_id,old_status,new_status,changed_by,note) VALUES (:id,:oldStatus,:newStatus,:userId,:note)',
+        {id:orderId,oldStatus:currentOrder.status,newStatus:status,userId:actorUserId,note:'LIS workflow status updated'}
+      );
+    }
+  }
 }
 
 module.exports={getLaboratoryForBranch,getAvailableTestsForBranch,listTests,getTest,createTest,updateTest,saveTestParameters,createOrder,syncDoctorRequestedTests,listOrders,getOrder,collectSample,receiveSample,rejectSample,getResult,saveResult,verifyResult,releaseResult,attachReportFile,cancelOrder,patientOrders,patientReport};
