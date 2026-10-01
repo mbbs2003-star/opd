@@ -57,24 +57,16 @@
   <div class="section-label">Diagnosis</div>
   <div><%= prescription.diagnosis || '—' %></div>
 
-  <div class="section-label">Rx</div>
-  <table class="print-table">
-    <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Route</th><th>Qty</th><th>Instructions</th></tr></thead>
-    <tbody>
-      <% items.forEach(function(it, i) { %>
-        <tr>
-          <td><%= i + 1 %></td>
-          <td><%= it.medicine_name_freetext %></td>
-          <td><%= it.dosage || '—' %></td>
-          <td><%= it.frequency || '—' %></td>
-          <td><%= it.duration || '—' %></td>
-          <td><%= it.route || '—' %></td>
-          <td><%= it.quantity || '—' %></td>
-          <td><%= it.instructions || '—' %></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+  <div class="section-label">Rx / Prescription Instructions</div>
+  <% items.forEach(function(it, i) { %>
+    <div class="rx-print-item">
+      <div><strong><%= i + 1 %>. <%= it.medicine_name_freetext %></strong><% if (it.composition) { %> <span>[<%= it.composition %>]</span><% } %></div>
+      <div class="small"><%= it.medicine_form || 'Medicine' %> · <%= it.dosage || '—' %> · <%= it.frequency || '—' %> · <%= it.duration ? it.duration + (String(it.duration).match(/days?$/i) ? '' : ' days') : '—' %> · <%= it.route || '—' %><% if (it.quantity) { %> · Qty <%= it.quantity %><% } %></div>
+      <div class="rx-instruction-en"><strong>English:</strong> <%= it.prescriptionText ? it.prescriptionText.english : '—' %></div>
+      <div class="rx-instruction-bn"><strong>বাংলা:</strong> <%= it.prescriptionText ? it.prescriptionText.bengali : '—' %></div>
+      <% if (it.instructions) { %><div class="small text-muted">Additional: <%= it.instructions %></div><% } %>
+    </div>
+  <% }) %>
 
   <% if (prescription.investigation_advice) { %>
     <div class="section-label">Investigation Advice</div>
