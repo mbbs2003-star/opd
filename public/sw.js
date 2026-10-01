@@ -44,7 +44,27 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache-first only for static same-origin assets.
+  // Stylesheets must be network-first so deployments are not trapped
+  // behind an older cached desktop/mobile layout.
+  const isStylesheet = event.request.destination === 'style' ||
+    url.pathname.endsWith('.css');
+
+  if (isStylesheet) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Other static same-origin assets remain cache-first.
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
