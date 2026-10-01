@@ -57,6 +57,3 @@ ALTER TABLE medicines
 ALTER TABLE prescription_items
   ADD COLUMN composition VARCHAR(500) NULL AFTER medicine_name_freetext,
   ADD COLUMN medicine_form VARCHAR(80) NULL AFTER composition;
-
-INSERT INTO schema_migrations (filename) VALUES ('1000_doctor_consultation_enhancements.sql')
-ON DUPLICATE KEY UPDATE filename = VALUES(filename);
