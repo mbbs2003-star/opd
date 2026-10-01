@@ -74,6 +74,25 @@ async function getConsultationContext(visitId) {
   }
 
   // Previous visits (excluding this one), with diagnosis and vitals trend.
+  const doctorId = visit.doctor_id;
+  const [complaintSuggestions] = await pool.execute(
+    `SELECT id, complaint FROM doctor_complaint_suggestions
+     WHERE doctor_id = :doctorId ORDER BY updated_at DESC, complaint ASC LIMIT 200`,
+    { doctorId }
+  );
+
+  const [personalHistoryRows] = await pool.execute(
+    `SELECT personal_history, complementary_requested FROM opd_consultations
+     WHERE visit_id = :visitId LIMIT 1`,
+    { visitId }
+  );
+  let personalHistory = {};
+  if (personalHistoryRows[0] && personalHistoryRows[0].personal_history) {
+    try { personalHistory = typeof personalHistoryRows[0].personal_history === 'object'
+      ? personalHistoryRows[0].personal_history
+      : JSON.parse(personalHistoryRows[0].personal_history); } catch (_) { personalHistory = {}; }
+  }
+
   const [previousVisits] = await pool.execute(
     `SELECT v.id AS visit_id, v.checked_in_at, c.diagnosis, c.clinical_notes, c.follow_up_date,
             u.name AS doctor_name, vt.bp, vt.pulse, vt.weight_kg, vt.temperature, vt.spo2
@@ -123,7 +142,10 @@ async function getConsultationContext(visitId) {
     previousPrescriptions,
     currentPrescriptions,
     invoice: invoice || null,
-    pregnancyCalculation
+    pregnancyCalculation,
+    complaintSuggestions,
+    personalHistory,
+    complementaryRequested: Boolean(personalHistoryRows[0]?.complementary_requested || consultation?.complementary_requested)
   };
 }
 
@@ -142,17 +164,29 @@ async function saveConsultation(visitId, payload, actorUserId) {
     const [[existing]] = await conn.execute('SELECT * FROM opd_consultations WHERE visit_id = :id', { id: visitId });
 
     let consultationId;
+    let personalHistory = payload.personalHistory || {};
+    if (typeof personalHistory === 'string') {
+      try { personalHistory = JSON.parse(personalHistory); } catch (_) { personalHistory = {}; }
+    }
+    const complementaryRequested = String(payload.complementaryRequested || '') === '1' ||
+      payload.complementaryRequested === true || payload.complementaryRequested === 'on';
     if (existing) {
       if (visit.status === 'COMPLETED') {
         throw new AppError('This consultation is finalized and cannot be edited', 409);
       }
       await conn.execute(
         `UPDATE opd_consultations SET complaints = :complaints, symptoms = :symptoms,
+          personal_history = :personalHistory, complementary_requested = :complementaryRequested,
+          complementary_requested_at = CASE WHEN :complementaryRequested = 1 THEN COALESCE(complementary_requested_at, NOW()) ELSE NULL END,
+          complementary_requested_by = CASE WHEN :complementaryRequested = 1 THEN :actorUserId ELSE NULL END,
           clinical_notes = :notes, diagnosis = :diagnosis, investigation_advice = :advice,
           follow_up_date = :followUp WHERE id = :id`,
         {
           complaints: payload.complaints || null,
           symptoms: payload.symptoms || null,
+          personalHistory: JSON.stringify(personalHistory),
+          complementaryRequested: complementaryRequested ? 1 : 0,
+          actorUserId,
           notes: payload.clinicalNotes || null,
           diagnosis: payload.diagnosis || null,
           advice: payload.investigationAdvice || null,
@@ -164,12 +198,19 @@ async function saveConsultation(visitId, payload, actorUserId) {
     } else {
       const [result] = await conn.execute(
         `INSERT INTO opd_consultations
-          (visit_id, complaints, symptoms, clinical_notes, diagnosis, investigation_advice, follow_up_date, created_by)
-         VALUES (:visitId, :complaints, :symptoms, :notes, :diagnosis, :advice, :followUp, :createdBy)`,
+          (visit_id, complaints, symptoms, personal_history, complementary_requested, complementary_requested_at, complementary_requested_by,
+           clinical_notes, diagnosis, investigation_advice, follow_up_date, created_by)
+         VALUES (:visitId, :complaints, :symptoms, :personalHistory, :complementaryRequested,
+                 CASE WHEN :complementaryRequested = 1 THEN NOW() ELSE NULL END,
+                 CASE WHEN :complementaryRequested = 1 THEN :actorUserId ELSE NULL END,
+                 :notes, :diagnosis, :advice, :followUp, :createdBy)`,
         {
           visitId,
           complaints: payload.complaints || null,
           symptoms: payload.symptoms || null,
+          personalHistory: JSON.stringify(personalHistory),
+          complementaryRequested: complementaryRequested ? 1 : 0,
+          actorUserId,
           notes: payload.clinicalNotes || null,
           diagnosis: payload.diagnosis || null,
           advice: payload.investigationAdvice || null,
