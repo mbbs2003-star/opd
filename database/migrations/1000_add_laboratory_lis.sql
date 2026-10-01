@@ -510,6 +510,57 @@ ON DUPLICATE KEY UPDATE
   price = VALUES(price),
   is_active = 1;
 
+-- Expanded starter catalogue for routine pathology and diagnostics.
+INSERT INTO lab_tests
+  (laboratory_id, section_id, category_id, code, name, short_name, test_type, specimen_type, container_type, fasting_required, patient_preparation, methodology, tat_minutes, price, is_active)
+SELECT l.id, s.id, c.id, x.code, x.name, x.short_name, x.test_type, x.specimen_type, x.container_type,
+       x.fasting_required, x.preparation, x.methodology, x.tat_minutes, x.price, 1
+FROM laboratories l
+JOIN (
+  SELECT 'HEM-HB' code,'Haemoglobin' name,'Hb' short_name,'LAB' test_type,'EDTA Whole Blood' specimen_type,'EDTA Vacutainer' container_type,0 fasting_required,'No special preparation.' preparation,'Photometric / automated haematology' methodology,720 tat_minutes,120.00 price,'HEM' section_code,'BLOOD' category_code
+  UNION ALL SELECT 'HEM-PTINR','Prothrombin Time / INR','PT/INR','LAB','Citrated Plasma','Blue-top citrate tube',0,'Collect with correct blood-to-anticoagulant ratio.','Coagulometer',720,450.00,'HEM','BLOOD'
+  UNION ALL SELECT 'HEM-APTT','Activated Partial Thromboplastin Time','APTT','LAB','Citrated Plasma','Blue-top citrate tube',0,'Collect with correct blood-to-anticoagulant ratio.','Coagulometer',720,450.00,'HEM','BLOOD'
+  UNION ALL SELECT 'HEM-BGRH','Blood Group & Rh Typing','ABO / Rh','LAB','Whole Blood','EDTA Vacutainer',0,'No special preparation.','Haemagglutination',720,180.00,'HEM','BLOOD'
+  UNION ALL SELECT 'BIO-RBS','Random Blood Glucose','RBS','LAB','Fluoride Plasma','Fluoride/grey-top tube',0,'No fasting required.','Hexokinase / enzymatic',360,100.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-UREA','Blood Urea','Urea','LAB','Serum','Plain / gel tube',0,'No special preparation.','Urease method',720,120.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-CREAT','Serum Creatinine','Creatinine','LAB','Serum','Plain / gel tube',0,'No special preparation.','Jaffe / enzymatic',720,120.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-URIC','Uric Acid','Uric Acid','LAB','Serum','Plain / gel tube',0,'Prefer fasting sample where clinically indicated.','Uricase method',720,180.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-NA','Serum Sodium','Na+','LAB','Serum / Plasma','Lithium heparin / gel tube',0,'No special preparation.','Ion selective electrode',360,180.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-K','Serum Potassium','K+','LAB','Serum / Plasma','Lithium heparin / gel tube',0,'Avoid haemolysis; process promptly.','Ion selective electrode',360,180.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-CA','Serum Calcium','Calcium','LAB','Serum','Plain / gel tube',0,'No special preparation.','Colorimetric',720,180.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-MG','Serum Magnesium','Magnesium','LAB','Serum','Plain / gel tube',0,'No special preparation.','Colorimetric',720,220.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-BILI','Bilirubin Total & Direct','Bilirubin','LAB','Serum','Plain / gel tube',0,'Protect sample from prolonged light exposure.','Diazo / colorimetric',720,250.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-SGPT','ALT / SGPT','ALT','LAB','Serum','Plain / gel tube',0,'No special preparation.','IFCC enzymatic',720,150.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-SGOT','AST / SGOT','AST','LAB','Serum','Plain / gel tube',0,'No special preparation.','IFCC enzymatic',720,150.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-ALP','Alkaline Phosphatase','ALP','LAB','Serum','Plain / gel tube',0,'No special preparation.','Colorimetric',720,180.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-ALBUMIN','Serum Albumin','Albumin','LAB','Serum','Plain / gel tube',0,'No special preparation.','BCG method',720,180.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-AMYLASE','Serum Amylase','Amylase','LAB','Serum','Plain / gel tube',0,'No special preparation.','Enzymatic',720,350.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'BIO-LIPASE','Serum Lipase','Lipase','LAB','Serum','Plain / gel tube',0,'No special preparation.','Enzymatic',720,450.00,'BIO','BIOCHEM'
+  UNION ALL SELECT 'SER-HBSAG','Hepatitis B Surface Antigen','HBsAg','LAB','Serum','Plain / gel tube',0,'No special preparation.','Rapid immunoassay / CLIA',1440,300.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'SER-HCV','Anti-HCV','HCV Ab','LAB','Serum','Plain / gel tube',0,'No special preparation.','Rapid immunoassay / CLIA',1440,400.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'SER-HIV','HIV 1 & 2 Antigen / Antibody','HIV','LAB','Serum','Plain / gel tube',0,'Testing and disclosure according to applicable clinical and legal protocol.','Immunoassay',1440,450.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'SER-WIDAL','Widal Test','Widal','LAB','Serum','Plain / gel tube',0,'No special preparation.','Agglutination',1440,250.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'SER-DENGUE','Dengue NS1 / IgM / IgG','Dengue Profile','LAB','Serum','Plain / gel tube',0,'No special preparation.','Immunochromatographic / ELISA',1440,650.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'SER-VDRL','VDRL / RPR Syphilis Screen','VDRL','LAB','Serum','Plain / gel tube',0,'No special preparation.','Flocculation / immunoassay',1440,300.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'SER-ASO','Anti-Streptolysin O','ASO','LAB','Serum','Plain / gel tube',0,'No special preparation.','Latex agglutination',1440,300.00,'SER','SEROLOGY'
+  UNION ALL SELECT 'CLP-UPT','Urine Pregnancy Test','UPT','LAB','Urine','Sterile urine container',0,'First-morning urine preferred where clinically appropriate.','Immunochromatography',360,150.00,'CLP','URINE'
+  UNION ALL SELECT 'CLP-SEMINAL','Semen Analysis','Semen Analysis','LAB','Semen','Sterile wide-mouth container',0,'Abstinence and collection instructions as per laboratory protocol; deliver promptly.','Macroscopy + microscopy',720,500.00,'CLP','BLOOD'
+  UNION ALL SELECT 'IMG-USG-KUB','USG KUB','USG KUB','USG','N/A','N/A',0,'Preparation according to centre protocol.','Ultrasonography',1440,1000.00,'IMG','USG'
+  UNION ALL SELECT 'IMG-USG-OBS','USG Obstetric / Pregnancy Scan','USG Obstetric','USG','N/A','N/A',0,'Preparation and gestational-age requirements depend on scan type.','Ultrasonography',1440,1400.00,'IMG','USG'
+  UNION ALL SELECT 'IMG-USG-THY','USG Thyroid','USG Thyroid','USG','N/A','N/A',0,'No special preparation usually required.','Ultrasonography',1440,900.00,'IMG','USG'
+  UNION ALL SELECT 'IMG-USG-BREAST','USG Breast','USG Breast','USG','N/A','N/A',0,'No special preparation usually required.','Ultrasonography',1440,1000.00,'IMG','USG'
+  UNION ALL SELECT 'IMG-USG-SCROTUM','USG Scrotum','USG Scrotum','USG','N/A','N/A',0,'No special preparation usually required.','Ultrasonography',1440,1000.00,'IMG','USG'
+  UNION ALL SELECT 'IMG-XRAY-KNEE','X-Ray Knee AP / Lateral','Knee X-Ray','RADIOLOGY','N/A','N/A',0,'Pregnancy status must be disclosed.','Digital radiography',720,600.00,'IMG','RADIOLOGY'
+  UNION ALL SELECT 'IMG-XRAY-ABDOMEN','X-Ray Abdomen','Abdomen X-Ray','RADIOLOGY','N/A','N/A',0,'Pregnancy status must be disclosed.','Digital radiography',720,600.00,'IMG','RADIOLOGY'
+) x
+JOIN lab_sections s ON s.laboratory_id=l.id AND s.code=x.section_code
+JOIN lab_test_categories c ON c.laboratory_id=l.id AND c.code=x.category_code
+WHERE l.code='CHB-LAB'
+ON DUPLICATE KEY UPDATE name=VALUES(name),short_name=VALUES(short_name),test_type=VALUES(test_type),
+  specimen_type=VALUES(specimen_type),container_type=VALUES(container_type),fasting_required=VALUES(fasting_required),
+  patient_preparation=VALUES(patient_preparation),methodology=VALUES(methodology),tat_minutes=VALUES(tat_minutes),
+  price=VALUES(price),is_active=1;
+
 -- Starter structured parameters. These are intentionally editable.
 INSERT INTO lab_test_parameters
   (test_id, code, name, data_type, unit, reference_range_text, sort_order)
