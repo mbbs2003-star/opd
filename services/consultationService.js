@@ -221,6 +221,37 @@ async function saveConsultation(visitId, payload, actorUserId) {
       consultationId = result.insertId;
     }
 
+    // If an invoice already exists, synchronize the internal complementary
+    // request immediately. Normal OPD flow creates the invoice after completion,
+    // in which case billingService creates the pending request instead.
+    const [[existingInvoice]] = await conn.execute(
+      "SELECT id FROM invoices WHERE visit_id = :visitId AND status <> 'CANCELLED' ORDER BY created_at DESC LIMIT 1",
+      { visitId }
+    );
+    if (existingInvoice) {
+      const [pendingComplementary] = await conn.execute(
+        "SELECT id FROM discount_requests WHERE invoice_id = :invoiceId AND status = 'PENDING' AND reason LIKE 'Complementary consultation%'",
+        { invoiceId: existingInvoice.id }
+      );
+      if (complementaryRequested && !pendingComplementary.length) {
+        await conn.execute(
+          `INSERT INTO discount_requests
+           (invoice_id, requested_amount, requested_percentage, reason, requested_by, status)
+           VALUES (:invoiceId, NULL, 100, :reason, :requestedBy, 'PENDING')`,
+          {
+            invoiceId: existingInvoice.id,
+            reason: 'Complementary consultation — doctor requested a 100% consultation-fee waiver.',
+            requestedBy: actorUserId
+          }
+        );
+      } else if (!complementaryRequested && pendingComplementary.length) {
+        await conn.execute(
+          "UPDATE discount_requests SET status = 'CANCELLED', rejection_reason = 'Doctor removed the complementary request.' WHERE id = :id",
+          { id: pendingComplementary[0].id }
+        );
+      }
+    }
+
     // Vitals (1:1 with consultation)
     await conn.execute(
       `INSERT INTO vitals (consultation_id, bp, pulse, temperature, spo2, weight_kg, height_cm)
