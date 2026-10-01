@@ -137,6 +137,7 @@ app.use('/billing', require('./routes/billingRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
 app.use('/reports', require('./routes/reportRoutes'));
 app.use('/scan', require('./routes/scanRoutes'));
+app.use('/lab', require('./routes/labRoutes'));
 
 app.get('/manifest.json', async (req, res, next) => {
   try {
