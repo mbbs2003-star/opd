@@ -1,1 +1,20 @@
-<div class="d-flex justify-content-between mb-4"><div><h1 class="h3"><%= prescription.prescription_code %></h1><p class="text-muted">Patient: <%= prescription.patient_name %> · Dr. <%= prescription.doctor_name %></p></div><a class="btn btn-outline-primary" href="/prescriptions/<%= prescription.id %>/print">Print</a></div><div class="card"><div class="card-header">Medicines</div><table class="table mb-0"><thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th></tr></thead><tbody><% (items||[]).forEach(i=>{ %><tr><td><%= i.medicine_name_freetext||i.medicine_name||'' %></td><td><%= i.dosage||'' %></td><td><%= i.frequency||'' %></td><td><%= i.duration||'' %></td><td><%= i.instructions||'' %></td></tr><% }) %></tbody></table></div>
+<div class="d-flex justify-content-between mb-4">
+  <div><h1 class="h3"><%= prescription.prescription_code %></h1><p class="text-muted">Patient: <%= prescription.patient_name %> · Dr. <%= prescription.doctor_name %></p></div>
+  <a class="btn btn-outline-primary" href="/prescriptions/<%= prescription.id %>/print">Print</a>
+</div>
+<div class="card">
+  <div class="card-header">Prescription Instructions</div>
+  <div class="card-body">
+    <% (items||[]).forEach(function(i, idx){ %>
+      <div class="border rounded p-3 mb-2">
+        <div><strong><%= idx + 1 %>. <%= i.medicine_name_freetext||i.medicine_name||'' %></strong><% if(i.composition){ %> <span class="text-muted">[<%= i.composition %>]</span><% } %></div>
+        <div class="small text-muted mt-1"><%= i.medicine_form||'Medicine' %> · Dose <%= i.dosage||'—' %> · <%= i.frequency||'—' %> · <%= i.duration ? i.duration + (String(i.duration).match(/days?$/i)?'':' days') : '—' %> · <%= i.route||'—' %><% if(i.quantity){ %> · Qty <%= i.quantity %><% } %></div>
+        <% if(i.prescriptionText){ %>
+          <div class="mt-2"><strong>English:</strong> <%= i.prescriptionText.english %></div>
+          <div class="mt-1" style="font-family:'Noto Sans Bengali','Nirmala UI','Vrinda',sans-serif;line-height:1.7"><strong>বাংলা:</strong> <%= i.prescriptionText.bengali %></div>
+        <% } %>
+        <% if(i.instructions){ %><div class="small text-muted mt-1">Additional: <%= i.instructions %></div><% } %>
+      </div>
+    <% }) %>
+  </div>
+</div>
