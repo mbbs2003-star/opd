@@ -53,14 +53,14 @@ async function getConsultationContext(visitId) {
   if (consultation) {
     try {
       const [[appointmentVitals]] = await pool.execute(
-        `SELECT bp, pulse, temperature, spo2, weight_kg, height_cm
+        `SELECT bp, pulse, temperature, spo2, weight_kg, height_cm, respiratory_rate
          FROM appointment_vitals
          WHERE visit_id = :id
          LIMIT 1`,
         { id: visitId }
       );
       if (appointmentVitals) {
-        for (const field of ['bp', 'pulse', 'temperature', 'spo2', 'weight_kg', 'height_cm']) {
+        for (const field of ['bp', 'pulse', 'temperature', 'spo2', 'weight_kg', 'height_cm', 'respiratory_rate']) {
           if (appointmentVitals[field] !== null && appointmentVitals[field] !== undefined) {
             consultation[field] = appointmentVitals[field];
           }
