@@ -71,6 +71,26 @@ async function resolve(req, res, next) {
       return res.redirect(`/billing/invoices/${inv.id}`);
     }
 
+    if (/^LAB/i.test(raw)) {
+      const [[order]] = await pool.execute(
+        'SELECT id FROM lab_orders WHERE order_code = :code LIMIT 1',
+        { code: raw.toUpperCase() }
+      );
+      if (!order) throw new AppError('No laboratory order found for code ' + raw, 404);
+      if (!req.user.permissions.includes('lab.view')) throw new AppError('You do not have access to laboratory orders', 403);
+      return res.redirect('/lab/orders/' + order.id);
+    }
+
+    if (/^SMP/i.test(raw) || /^CHB20/i.test(raw)) {
+      const [[sample]] = await pool.execute(
+        'SELECT oi.lab_order_id FROM lab_samples s JOIN lab_order_items oi ON oi.id = s.lab_order_item_id WHERE s.sample_code = :code OR s.barcode_value = :code LIMIT 1',
+        { code: raw.toUpperCase() }
+      );
+      if (!sample) throw new AppError('No laboratory sample found for code ' + raw, 404);
+      if (!req.user.permissions.includes('lab.view')) throw new AppError('You do not have access to laboratory samples', 403);
+      return res.redirect('/lab/orders/' + sample.lab_order_id);
+    }
+
     if (/^VIS/i.test(raw)) {
       const [[visit]] = await pool.execute('SELECT appointment_id FROM opd_visits WHERE visit_code = :code', {
         code: raw.toUpperCase()
