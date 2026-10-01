@@ -92,7 +92,7 @@ async function downloadReportFile(req,res,next){try{
 
 async function tests(req,res,next){try{
   const rows=await labService.listTests(branchId(req),{q:req.query.q||'',testType:req.query.testType||''});
-  res.render('lab/tests',{title:'Laboratory Test Master',tests:rows});
+  res.render('lab/tests',{title:'Laboratory Test Master',tests:rows,filters:req.query});
 }catch(err){next(err);}}
 
 async function showTestForm(req,res,next){try{
