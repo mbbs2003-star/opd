@@ -32,7 +32,9 @@ async function createInvoice(visitId, otherCharges, actorUserId) {
   return withTransaction(async (conn) => {
     const [[visit]] = await conn.execute(
       `SELECT v.id, v.status, v.patient_id, v.doctor_id, v.branch_id, a.department_id, d.consultation_fee
+       , c.complementary_requested, c.complementary_requested_by
        FROM opd_visits v
+       LEFT JOIN opd_consultations c ON c.visit_id = v.id
        JOIN appointments a ON a.id = v.appointment_id
        JOIN doctors d ON d.id = v.doctor_id
        WHERE v.id = :id`,
@@ -77,6 +79,30 @@ async function createInvoice(visitId, otherCharges, actorUserId) {
       }
     );
     const invoiceId = result.insertId;
+
+    if (visit.complementary_requested) {
+      const requesterId = visit.complementary_requested_by || actorUserId;
+      await conn.execute(
+        `INSERT INTO discount_requests
+         (invoice_id, requested_amount, requested_percentage, reason, requested_by, status)
+         VALUES (:invoiceId, NULL, 100, :reason, :requestedBy, 'PENDING')`,
+        {
+          invoiceId,
+          reason: 'Complementary consultation — doctor requested a 100% consultation-fee waiver.',
+          requestedBy: requesterId
+        }
+      );
+      await auditService.log(
+        {
+          userId: requesterId,
+          action: 'COMPLEMENTARY_DISCOUNT_REQUESTED',
+          entity: 'invoice',
+          entityId: invoiceId,
+          newValue: { invoiceNumber, percentage: 100, source: 'doctor_consultation' }
+        },
+        conn
+      );
+    }
 
     for (const item of items) {
       await conn.execute(
