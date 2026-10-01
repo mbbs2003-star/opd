@@ -23,6 +23,8 @@ function normalizeItems(rawItems) {
 function itemsFromBody(body) {
   const names = [].concat(body.medicineName || []);
   const medicineIds = [].concat(body.medicineId || []);
+  const compositions = [].concat(body.composition || []);
+  const forms = [].concat(body.medicineForm || []);
   const dosages = [].concat(body.dosage || []);
   const frequencies = [].concat(body.frequency || []);
   const durations = [].concat(body.duration || []);
@@ -36,6 +38,8 @@ function itemsFromBody(body) {
     items.push({
       medicineId: medicineIds[i] ? Number(medicineIds[i]) || null : null,
       medicineName: String(names[i]).trim(),
+      composition: compositions[i] || null,
+      medicineForm: forms[i] || null,
       dosage: dosages[i] || null,
       frequency: frequencies[i] || null,
       duration: durations[i] || null,
@@ -91,6 +95,7 @@ async function createPrescription(visitId, items, actorUserId) {
     );
     const prescriptionId = result.insertId;
 
+    await rememberPrescriptionOptions(conn, items, actorUserId);
     await insertItems(conn, prescriptionId, items);
 
     await auditService.log(
@@ -108,17 +113,34 @@ async function createPrescription(visitId, items, actorUserId) {
   });
 }
 
+async function rememberPrescriptionOptions(conn, items, actorUserId) {
+  for (const item of items) {
+    for (const [optionType, value] of [['FORM', item.medicineForm], ['ROUTE', item.route]]) {
+      const clean = String(value || '').trim();
+      if (!clean || clean.toLowerCase() === 'other') continue;
+      await conn.execute(
+        `INSERT INTO prescription_option_values (option_type, value, normalized)
+         VALUES (:optionType, :value, :normalized)
+         ON DUPLICATE KEY UPDATE value = VALUES(value)`,
+        { optionType, value: clean, normalized: clean.toLowerCase() }
+      );
+    }
+  }
+}
+
 async function insertItems(conn, prescriptionId, items) {
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
     await conn.execute(
       `INSERT INTO prescription_items
-        (prescription_id, medicine_id, medicine_name_freetext, dosage, frequency, duration, route, quantity, instructions, sort_order)
-       VALUES (:prescriptionId, :medicineId, :name, :dosage, :frequency, :duration, :route, :quantity, :instructions, :sortOrder)`,
+        (prescription_id, medicine_id, medicine_name_freetext, composition, medicine_form, dosage, frequency, duration, route, quantity, instructions, sort_order)
+       VALUES (:prescriptionId, :medicineId, :name, :composition, :medicineForm, :dosage, :frequency, :duration, :route, :quantity, :instructions, :sortOrder)`,
       {
         prescriptionId,
         medicineId: it.medicineId || null,
         name: it.medicineName,
+        composition: it.composition || null,
+        medicineForm: it.medicineForm || null,
         dosage: it.dosage || null,
         frequency: it.frequency || null,
         duration: it.duration || null,
@@ -168,6 +190,7 @@ async function amendPrescription(prescriptionId, items, reason, actorUserId) {
     );
     const newId = result.insertId;
 
+    await rememberPrescriptionOptions(conn, items, actorUserId);
     await insertItems(conn, newId, items);
 
     await auditService.log(
