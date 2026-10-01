@@ -148,7 +148,7 @@ async function resetPassword(req, res, next) {
         .catch(() => {});
     }
 
-    res.redirect(`/patients/${req.body.healthId || ''}`.replace(/\\/$/, '') || '/patients');
+    res.redirect(`/patients/${req.body.healthId || ''}`.replace(/\/$/, '') || '/patients');
   } catch (err) {
     if (err instanceof AppError) {
       req.flash('errors', [{ message: err.message }]);
