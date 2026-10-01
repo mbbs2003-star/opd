@@ -266,6 +266,7 @@
   if (!body) return;
   const formOptions = <%- JSON.stringify(formOptions || []) %>;
   const routeOptions = <%- JSON.stringify(routeOptions || []) %>;
+  const medicineCatalog = <%- JSON.stringify(medicines || []) %>;
   const freq = ['OD','BD','TDS','QDS','SOS'];
   function esc(v){return String(v || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function optionList(items){return items.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');}
@@ -277,17 +278,20 @@
       '<td><input type="text" name="dosage" class="form-control form-control-sm" placeholder="1"></td>'+
       '<td><div class="d-flex flex-wrap gap-1 frequency-pills">'+freq.map(x=>'<label class="badge rounded-pill text-bg-light border"><input type="checkbox" class="frequency-check me-1" value="'+x+'">'+x+'</label>').join('')+'</div><input type="hidden" name="frequency" class="frequency-value"></td>'+
       '<td><input type="number" name="duration" class="form-control form-control-sm" min="1" step="1" placeholder="7"></td>'+
-      '<td><select name="route" class="form-select form-select-sm route-select"><option value="">Select</option>'+optionList(routeOptions)+'<option value="__OTHER__">+ Add route</option></select><input type="text" class="form-control form-control-sm mt-1 custom-route" placeholder="New route" style="display:none"></td>'+
+      '<td><select name="route" class="form-select form-select-sm route-select"><option value="">Select</option>'+optionList(routeOptions)+'<option value="__OTHER__">+ Add route</option></select><span class="badge rounded-pill route-badge mt-1">Route</span><input type="text" class="form-control form-control-sm mt-1 custom-route" placeholder="New route" style="display:none"></td>'+
       '<td><input type="text" name="quantity" class="form-control form-control-sm" placeholder="14"></td>'+
       '<td><input type="text" name="instructions" class="form-control form-control-sm" placeholder="Before food"></td>'+
       '<td><button type="button" class="btn btn-sm btn-outline-danger remove-row">&times;</button></td></tr>';
   }
   function syncFrequency(row){row.querySelector('.frequency-value').value=Array.from(row.querySelectorAll('.frequency-check:checked')).map(x=>x.value).join(', ');}
-  function syncCustom(select,cls){const row=select.closest('tr'),input=row.querySelector(cls),other=select.value==='__OTHER__';input.style.display=other?'block':'none';if(other)input.focus();else input.value='';}
+  function syncCustom(select,cls){const row=select.closest('tr'),input=row.querySelector(cls),other=select.value==='__OTHER__';input.style.display=other?'block':'none';if(other)input.focus();else input.value='';updateRouteBadge(row);}
+  function updateRouteBadge(row){const s=row.querySelector('.route-select'),b=row.querySelector('.route-badge');if(!b)return;const v=s.value;b.textContent=v==='__OTHER__'?'Custom':(v||'Route');b.className='badge rounded-pill route-badge mt-1 '+({'P/O':'route-po','P/V':'route-pv','S/L':'route-sl','PR':'route-pr','I/V':'route-iv','I/M':'route-im','S/C':'route-sc'}[v]||'route-other');}
+  function populateMedicine(row){const input=row.querySelector('input[name="medicineName"]');if(!input)return;const q=input.value.trim().toLowerCase();const m=medicineCatalog.find(x=>String(x.name||'').toLowerCase()===q || (String(x.name||'')+' '+String(x.strength||'')).trim().toLowerCase()===q);if(m){const comp=row.querySelector('input[name="composition"]');if(comp&&!comp.value)comp.value=m.composition||m.strength||'';const fs=row.querySelector('.medicine-form');if(fs&&!fs.value&&m.form){const match=Array.from(fs.options).find(o=>o.value.toLowerCase()===String(m.form).toLowerCase());if(match)fs.value=match.value;}}}
   function addRow(){body.insertAdjacentHTML('beforeend',rowHtml());}
   addRow();
   document.getElementById('addRowBtn').addEventListener('click',addRow);
   body.addEventListener('change',e=>{const row=e.target.closest('tr');if(!row)return;if(e.target.classList.contains('frequency-check'))syncFrequency(row);if(e.target.classList.contains('medicine-form'))syncCustom(e.target,'.custom-form');if(e.target.classList.contains('route-select'))syncCustom(e.target,'.custom-route');});
+  body.addEventListener('input',e=>{if(e.target.name==='medicineName')populateMedicine(e.target.closest('tr'));});
   body.addEventListener('click',e=>{if(e.target.classList.contains('remove-row')&&body.rows.length>1)e.target.closest('tr').remove();});
   document.getElementById('rxForm').addEventListener('submit',()=>{body.querySelectorAll('tr').forEach(row=>{const f=row.querySelector('.medicine-form'),rt=row.querySelector('.route-select');if(f.value==='__OTHER__')f.value=row.querySelector('.custom-form').value.trim();if(rt.value==='__OTHER__')rt.value=row.querySelector('.custom-route').value.trim();syncFrequency(row);});});
 })();
