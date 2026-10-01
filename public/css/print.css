@@ -15,6 +15,10 @@ body.print-doc {
   background:#fff;
 }
 .print-header{text-align:center}
+.chhayabithi-letterhead{display:flex;flex-direction:column;align-items:center;text-align:center}
+.letterhead-brand{display:flex;align-items:center;justify-content:center;width:220px;height:68px;margin:0 auto 5px;overflow:hidden}
+.letterhead-logo{display:block;width:220px;height:68px;max-width:220px;max-height:68px;object-fit:contain;object-position:center}
+
 .print-header .hospital-name{font-size:24px;font-weight:700;letter-spacing:.06em;color:#0d6e6e}
 .print-header .hospital-sub{font-size:12px;font-weight:600;color:#333}
 .print-header .hospital-addr{font-size:11px;color:#555}
