@@ -401,6 +401,14 @@ async function recordPayment(invoiceId, payload, actorUserId) {
 
     await conn.execute("UPDATE invoices SET status = 'PAID' WHERE id = :id", { id: invoiceId });
 
+    if (invoice.visit_id) {
+      await conn.execute(
+        `UPDATE lab_orders SET payment_status = 'PAID'
+         WHERE visit_id = :visitId AND status <> 'CANCELLED'`,
+        { visitId: invoice.visit_id }
+      );
+    }
+
     await auditService.log(
       {
         userId: actorUserId,
