@@ -5,9 +5,9 @@
 <td><% if(i.sample_code){ %><strong><%= i.sample_code %></strong><div class="small"><code><%= i.barcode_value %></code></div><% }else{ %>—<% } %></td>
 <td><% if(i.result_id){ %><a href="/lab/results/<%= i.result_id %>" class="btn btn-sm btn-outline-primary"><%= i.result_status %> v<%= i.result_version %></a><% }else{ %>—<% } %></td>
 <td><div class="d-flex flex-wrap gap-1">
-<% if(['ORDERED','BOOKED','SAMPLE_PENDING'].includes(i.status)){ %><form method="POST" action="/lab/items/<%= i.id %>/sample/collect"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-primary">Collect</button></form><% } %>
-<% if(i.sample_status==='COLLECTED'){ %><form method="POST" action="/lab/items/<%= i.id %>/sample/receive"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-secondary">Receive</button></form><% } %>
-<% if(['RECEIVED','COLLECTED','PROCESSING','RESULT_ENTERED','VERIFIED'].includes(i.status)){ %><a href="/lab/orders/<%= order.id %>/items/<%= i.id %>/result" class="btn btn-sm btn-primary">Result</a><% } %>
+<% if(currentUser && currentUser.permissions.includes('lab.sample.collect') && ['ORDERED','BOOKED','SAMPLE_PENDING'].includes(i.status)){ %><form method="POST" action="/lab/items/<%= i.id %>/sample/collect"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-primary">Collect</button></form><% } %>
+<% if(currentUser && currentUser.permissions.includes('lab.sample.collect') && i.sample_status==='COLLECTED'){ %><form method="POST" action="/lab/items/<%= i.id %>/sample/receive"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-secondary">Receive</button></form><% } %>
+<% if(currentUser && currentUser.permissions.includes('lab.result.enter') && ['RECEIVED','COLLECTED','PROCESSING','RESULT_ENTERED','VERIFIED'].includes(i.status)){ %><a href="/lab/orders/<%= order.id %>/items/<%= i.id %>/result" class="btn btn-sm btn-primary">Result</a><% } %>
 <% if(i.result_status==='RELEASED'){ %><a href="/lab/results/<%= i.result_id %>/print" target="_blank" class="btn btn-sm btn-outline-success">Report</a><% } %>
 </div></td></tr><% }) %>
 </tbody></table></div></div>
