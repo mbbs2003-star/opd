@@ -47,7 +47,7 @@ async function view(req, res, next) {
     if (!data) throw new AppError('Prescription not found', 404);
 
     const [medicines] = await pool.execute(
-      'SELECT id, name, strength, form FROM medicines WHERE is_active = 1 ORDER BY name LIMIT 500'
+      'SELECT id, name, strength, composition, form FROM medicines WHERE is_active = 1 ORDER BY name LIMIT 500'
     );
 
     const canAmend =
