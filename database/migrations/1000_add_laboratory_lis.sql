@@ -428,8 +428,10 @@ INSERT INTO laboratories
   (branch_id, code, name, facility_type, is_active)
 SELECT b.id, 'CHB-LAB', 'Chhayabithi Laboratory & Diagnostic Centre', 'LAB_AND_DIAGNOSTIC', 1
 FROM branches b
-WHERE b.code = '01'
-  AND NOT EXISTS (SELECT 1 FROM laboratories l WHERE l.code = 'CHB-LAB');
+WHERE b.is_active = 1
+  AND NOT EXISTS (SELECT 1 FROM laboratories l WHERE l.code = 'CHB-LAB')
+ORDER BY b.id
+LIMIT 1;
 
 INSERT INTO lab_sections (laboratory_id, code, name, description)
 SELECT l.id, x.code, x.name, x.description
