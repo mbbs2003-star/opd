@@ -12,7 +12,8 @@
 .clinic-site *,
 .landing-footer * { box-sizing: border-box; }
 
-/* Only provide layout fallbacks for the public components. */
+/* Bootstrap-compatible public layout fallback.
+   Use Flexbox so this remains compatible whether Bootstrap loads or not. */
 .clinic-site .container,
 .landing-topbar .container,
 .landing-footer .container {
@@ -22,37 +23,28 @@
 
 .clinic-site .row,
 .landing-footer .row {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: 0;
+  margin-left: 0;
   gap: 1.5rem;
 }
 
-.clinic-site [class*="col-"],
-.landing-footer [class*="col-"] {
+.clinic-site .row > [class*="col-"],
+.landing-footer .row > [class*="col-"] {
   min-width: 0;
+  box-sizing: border-box;
+  flex: 0 0 auto;
 }
 
-/*
- * The fallback layout intentionally uses CSS Grid. Bootstrap may still load
- * afterwards and add percentage widths to .col-* elements; those widths must
- * not be allowed to shrink a grid item to a fraction of its grid track.
- * Keep the grid responsible for column sizing on the public site.
- */
-.clinic-site .row > [class*="col-"] {
-  width: auto !important;
-  max-width: none !important;
-  flex: none !important;
-  min-width: 0;
-}
-
-.clinic-site .col-6 { grid-column: span 6; }
-.clinic-site .col-12 { grid-column: span 12; }
-.clinic-site .col-md-6 { grid-column: span 6; }
-.clinic-site .col-md-4 { grid-column: span 4; }
-.clinic-site .col-lg-3 { grid-column: span 3; }
-.clinic-site .col-lg-4 { grid-column: span 4; }
-.clinic-site .col-lg-5 { grid-column: span 5; }
-.clinic-site .col-lg-7 { grid-column: span 7; }
+.clinic-site .col-6 { width: calc((100% - 1.5rem) / 2); }
+.clinic-site .col-12 { width: 100%; }
+.clinic-site .col-md-6 { width: calc((100% - 1.5rem) / 2); }
+.clinic-site .col-md-4 { width: calc((100% - 3rem) / 3); }
+.clinic-site .col-lg-3 { width: calc((100% - 4.5rem) / 4); }
+.clinic-site .col-lg-4 { width: calc((100% - 3rem) / 3); }
+.clinic-site .col-lg-5 { width: calc((100% - 3rem) * .4166667); }
+.clinic-site .col-lg-7 { width: calc((100% - 3rem) * .5833333); }
 
 .clinic-site .g-0 { gap: 0; }
 .clinic-site .g-2 { gap: .5rem; }
@@ -76,30 +68,6 @@
 .clinic-site .text-white { color: #fff !important; }
 .clinic-site .text-white-50 { color: rgba(255,255,255,.5) !important; }
 .clinic-site .text-decoration-none { text-decoration: none !important; }
-
-.clinic-site .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: .5rem;
-  padding: .55rem 1rem;
-  font: inherit;
-  line-height: 1.5;
-  text-decoration: none;
-  cursor: pointer;
-  transition: .2s ease;
-}
-.clinic-site .btn-lg { padding: .75rem 1.25rem; font-size: 1.05rem; }
-.clinic-site .px-4 { padding-inline: 1.5rem !important; }
-.clinic-site .btn-light { background: #fff; border-color: #fff; color: #07524f; }
-.clinic-site .btn-outline-light { background: transparent; border-color: rgba(255,255,255,.75); color: #fff; }
-.clinic-site .btn-outline-primary { background: transparent; border-color: #0d6e6e; color: #0d6e6e; }
-.clinic-site .btn-primary { background: #0d6e6e; border-color: #0d6e6e; color: #fff; }
-.clinic-site .btn:hover { transform: translateY(-1px); filter: brightness(.97); }
-
-.clinic-site .display-3 { font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.1; }
-.clinic-site .fw-bold { font-weight: 700 !important; }
 
 /* Mobile navigation fallback. */
 .landing-topbar { width: 100%; }
