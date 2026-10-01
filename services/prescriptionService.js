@@ -234,10 +234,12 @@ async function getPrescription(prescriptionId) {
   );
   if (!prescription) return null;
 
-  const [items] = await pool.execute(
+  let [items] = await pool.execute(
     'SELECT * FROM prescription_items WHERE prescription_id = :id ORDER BY sort_order',
     { id: prescriptionId }
   );
+  const { buildPrescriptionInstructions } = require('../utils/prescriptionText');
+  items = items.map(item => ({ ...item, prescriptionText: buildPrescriptionInstructions(item) }));
 
   const [versions] = await pool.execute(
     `SELECT id, version, is_current, amendment_reason, created_at
