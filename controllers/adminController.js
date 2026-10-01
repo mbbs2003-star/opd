@@ -141,6 +141,10 @@ async function showSettings(req, res, next) {
 
 async function updateSettings(req, res, next) {
   try {
+    // Checkbox forms may submit a scalar when unchecked and an array when
+    // a hidden fallback plus the checked value are both present.
+    const hasEnabledValue = (value) => Array.isArray(value) ? value.includes('1') : value === '1';
+
     const values = {
       hospital_name: req.body.hospital_name,
       hospital_tagline: req.body.hospital_tagline,
@@ -150,8 +154,8 @@ async function updateSettings(req, res, next) {
       seo_title: req.body.seo_title,
       seo_description: req.body.seo_description,
       seo_keywords: req.body.seo_keywords,
-      live_opd_show_names: req.body.live_opd_show_names === '1' ? '1' : '0',
-      maintenance_mode: req.body.maintenance_mode === '1' ? '1' : '0'
+      live_opd_show_names: hasEnabledValue(req.body.live_opd_show_names) ? '1' : '0',
+      maintenance_mode: hasEnabledValue(req.body.maintenance_mode) ? '1' : '0'
     };
 
     if (req.files) {
