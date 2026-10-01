@@ -379,3 +379,15 @@ img, video, canvas { max-width: 100%; height: auto; }
  .pregnancy-doctor-card{padding:1rem}.pregnancy-doctor-card__head{flex-direction:column}
  .vitals-workspace .btn-lg{width:100%}
 }
+
+
+/* Doctor prescription route markers */
+.route-badge{display:inline-block;font-size:.68rem;font-weight:800;min-width:48px;text-align:center}
+.route-po{background:#e7f7ef!important;color:#137a4b!important}
+.route-pv{background:#fdebf3!important;color:#a63b6a!important}
+.route-sl{background:#eee9ff!important;color:#6243a5!important}
+.route-pr{background:#fff0e1!important;color:#a45a08!important}
+.route-iv{background:#e8f2ff!important;color:#2862a4!important}
+.route-im{background:#e8f8ff!important;color:#16718a!important}
+.route-sc{background:#f2f0e8!important;color:#75651b!important}
+.route-other{background:#eef2f2!important;color:#526260!important}
