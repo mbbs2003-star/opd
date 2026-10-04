@@ -2,8 +2,9 @@
  * Only static same-origin assets are cached. HTML, API responses,
  * authenticated pages and live data always stay on the network.
  */
-const CACHE_NAME = 'chhayabithi-hms-v13';
+const CACHE_NAME = 'chhayabithi-hms-v15';
 
+// The canonical uploaded Chhayabithi icon is precached so installed PWAs refresh it.
 const PRECACHE_ASSETS = [
   '/css/style.css',
   '/css/public-bootstrap-fallback.css',
@@ -15,8 +16,7 @@ const PRECACHE_ASSETS = [
   '/js/main.js',
   '/js/pwa-install.js',
   '/images/chhayabithi-logo.webp',
-  '/images/pwa-icon-192.svg',
-  '/images/pwa-icon-512.svg'
+  '/images/chhayabithi-icon.svg'
 ];
 
 const STATIC_PREFIXES = ['/css/', '/js/', '/images/'];
