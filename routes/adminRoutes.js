@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { requireAuth } = require('../middleware/auth');
-const { requirePermission } = require('../middleware/roles');
+const { requirePermission, requireRole } = require('../middleware/roles');
 const { csrfProtection } = require('../middleware/csrf');
 const asyncHandler = require('../utils/asyncHandler');
 const { uploadImage } = require('../utils/upload');
@@ -25,10 +25,11 @@ router.post('/departments/:id/active', requirePermission('department.manage'), c
 
 router.get('/audit-logs', requirePermission('audit.view'), asyncHandler(adminController.auditLogs));
 
-router.get('/settings', requirePermission('settings.manage'), asyncHandler(adminController.showSettings));
+router.get('/settings', requirePermission('settings.manage'), requireRole('SUPER_ADMIN'), asyncHandler(adminController.showSettings));
 router.post(
   '/settings',
   requirePermission('settings.manage'),
+  requireRole('SUPER_ADMIN'),
   uploadImage.fields([
     { name: 'logo', maxCount: 1 },
     { name: 'favicon', maxCount: 1 },

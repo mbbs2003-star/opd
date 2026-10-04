@@ -1,0 +1,21 @@
+<div class="min-vh-100 d-flex align-items-center justify-content-center px-3 py-5 bg-light">
+  <div class="card border-0 shadow-sm text-center" style="max-width:620px;width:100%;border-radius:1rem;">
+    <div class="card-body p-4 p-md-5">
+      <div class="rounded-circle bg-warning-subtle d-inline-flex align-items-center justify-content-center mb-4" style="width:76px;height:76px;">
+        <i class="bi bi-tools fs-2 text-warning"></i>
+      </div>
+      <% if (siteSettings.logo_path) { %>
+        <img src="<%= siteSettings.logo_path %>" alt="<%= siteSettings.hospital_name %>" style="max-height:72px;max-width:260px;object-fit:contain;" class="mb-4">
+      <% } %>
+      <h1 class="h3 mb-3">We'll be back shortly</h1>
+      <p class="text-muted mb-4">
+        <%= siteSettings.hospital_name %> is temporarily unavailable while scheduled maintenance is being performed.
+        Please try again after the maintenance is complete.
+      </p>
+      <div class="alert alert-secondary small mb-0">
+        <i class="bi bi-shield-lock me-1"></i>
+        Access is temporarily restricted to authorized system administrators.
+      </div>
+    </div>
+  </div>
+</div>

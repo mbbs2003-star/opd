@@ -1,6 +1,7 @@
 const { pool, withTransaction } = require('../config/database');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const labService = require('./labService');
 
 /**
  * Doctor-scope authorization guard. A doctor may only open visits
@@ -50,30 +51,53 @@ async function getConsultationContext(visitId) {
     { id: visitId }
   );
 
-  if (consultation) {
-    try {
-      const [[appointmentVitals]] = await pool.execute(
-        `SELECT bp, pulse, temperature, spo2, weight_kg, height_cm
-         FROM appointment_vitals
-         WHERE visit_id = :id
-         LIMIT 1`,
-        { id: visitId }
-      );
-      if (appointmentVitals) {
-        for (const field of ['bp', 'pulse', 'temperature', 'spo2', 'weight_kg', 'height_cm']) {
-          if (appointmentVitals[field] !== null && appointmentVitals[field] !== undefined) {
-            consultation[field] = appointmentVitals[field];
-          }
+  // Receptionist-recorded vitals are visit-level data and must be available
+  // to the doctor even before an opd_consultations row exists.
+  let appointmentVitals = null;
+  try {
+    const [[savedVitals]] = await pool.execute(
+      `SELECT bp, pulse, temperature, spo2, weight_kg, height_cm, respiratory_rate, recorded_at
+       FROM appointment_vitals
+       WHERE visit_id = :id
+       LIMIT 1`,
+      { id: visitId }
+    );
+    appointmentVitals = savedVitals || null;
+
+    // Preserve the existing consultation form behavior by using receptionist
+    // values as the current clinical values when they were actually recorded.
+    if (consultation && appointmentVitals) {
+      for (const field of ['bp', 'pulse', 'temperature', 'spo2', 'weight_kg', 'height_cm', 'respiratory_rate']) {
+        if (appointmentVitals[field] !== null && appointmentVitals[field] !== undefined) {
+          consultation[field] = appointmentVitals[field];
         }
       }
-    } catch (err) {
-      // Older installations do not have appointment_vitals yet. The doctor
-      // can still use the consultation using the legacy vitals table.
-      if (err.code !== 'ER_NO_SUCH_TABLE' && err.code !== 'ER_BAD_TABLE_ERROR') throw err;
     }
+  } catch (err) {
+    // Older installations do not have appointment_vitals yet.
+    if (err.code !== 'ER_NO_SUCH_TABLE' && err.code !== 'ER_BAD_TABLE_ERROR') throw err;
   }
 
   // Previous visits (excluding this one), with diagnosis and vitals trend.
+  const doctorId = visit.doctor_id;
+  const [complaintSuggestions] = await pool.execute(
+    `SELECT id, complaint FROM doctor_complaint_suggestions
+     WHERE doctor_id = :doctorId ORDER BY updated_at DESC, complaint ASC LIMIT 200`,
+    { doctorId }
+  );
+
+  const [personalHistoryRows] = await pool.execute(
+    `SELECT personal_history, complementary_requested FROM opd_consultations
+     WHERE visit_id = :visitId LIMIT 1`,
+    { visitId }
+  );
+  let personalHistory = {};
+  if (personalHistoryRows[0] && personalHistoryRows[0].personal_history) {
+    try { personalHistory = typeof personalHistoryRows[0].personal_history === 'object'
+      ? personalHistoryRows[0].personal_history
+      : JSON.parse(personalHistoryRows[0].personal_history); } catch (_) { personalHistory = {}; }
+  }
+
   const [previousVisits] = await pool.execute(
     `SELECT v.id AS visit_id, v.checked_in_at, c.diagnosis, c.clinical_notes, c.follow_up_date,
             u.name AS doctor_name, vt.bp, vt.pulse, vt.weight_kg, vt.temperature, vt.spo2
@@ -110,6 +134,20 @@ async function getConsultationContext(visitId) {
     { visitId }
   );
 
+  const labTests = await labService.getAvailableTestsForBranch(visit.branch_id);
+  const [[labOrder]] = await pool.execute(
+    `SELECT id, order_code, status FROM lab_orders WHERE visit_id = :visitId AND source = 'DOCTOR' ORDER BY id DESC LIMIT 1`,
+    { visitId }
+  );
+  let selectedLabTestIds = [];
+  if (labOrder) {
+    const [selectedRows] = await pool.execute(
+      `SELECT test_id FROM lab_order_items WHERE lab_order_id = :orderId AND status <> 'CANCELLED'`,
+      { orderId: labOrder.id }
+    );
+    selectedLabTestIds = selectedRows.map((r) => Number(r.test_id));
+  }
+
   const { calculatePregnancy } = require('../utils/pregnancyCalculator');
   const pregnancyCalculation = String(visit.gender || '').toLowerCase() === 'female' &&
     visit.pregnancy_status === 'PREGNANT' && visit.lmp_date
@@ -119,11 +157,18 @@ async function getConsultationContext(visitId) {
   return {
     visit,
     consultation: consultation || null,
+    appointmentVitals,
     previousVisits,
     previousPrescriptions,
     currentPrescriptions,
     invoice: invoice || null,
-    pregnancyCalculation
+    pregnancyCalculation,
+    complaintSuggestions,
+    personalHistory,
+    complementaryRequested: Boolean(personalHistoryRows[0]?.complementary_requested || consultation?.complementary_requested),
+    labTests,
+    labOrder: labOrder || null,
+    selectedLabTestIds
   };
 }
 
@@ -142,17 +187,29 @@ async function saveConsultation(visitId, payload, actorUserId) {
     const [[existing]] = await conn.execute('SELECT * FROM opd_consultations WHERE visit_id = :id', { id: visitId });
 
     let consultationId;
+    let personalHistory = payload.personalHistory || {};
+    if (typeof personalHistory === 'string') {
+      try { personalHistory = JSON.parse(personalHistory); } catch (_) { personalHistory = {}; }
+    }
+    const complementaryRequested = String(payload.complementaryRequested || '') === '1' ||
+      payload.complementaryRequested === true || payload.complementaryRequested === 'on';
     if (existing) {
       if (visit.status === 'COMPLETED') {
         throw new AppError('This consultation is finalized and cannot be edited', 409);
       }
       await conn.execute(
         `UPDATE opd_consultations SET complaints = :complaints, symptoms = :symptoms,
+          personal_history = :personalHistory, complementary_requested = :complementaryRequested,
+          complementary_requested_at = CASE WHEN :complementaryRequested = 1 THEN COALESCE(complementary_requested_at, NOW()) ELSE NULL END,
+          complementary_requested_by = CASE WHEN :complementaryRequested = 1 THEN :actorUserId ELSE NULL END,
           clinical_notes = :notes, diagnosis = :diagnosis, investigation_advice = :advice,
           follow_up_date = :followUp WHERE id = :id`,
         {
           complaints: payload.complaints || null,
           symptoms: payload.symptoms || null,
+          personalHistory: JSON.stringify(personalHistory),
+          complementaryRequested: complementaryRequested ? 1 : 0,
+          actorUserId,
           notes: payload.clinicalNotes || null,
           diagnosis: payload.diagnosis || null,
           advice: payload.investigationAdvice || null,
@@ -164,12 +221,19 @@ async function saveConsultation(visitId, payload, actorUserId) {
     } else {
       const [result] = await conn.execute(
         `INSERT INTO opd_consultations
-          (visit_id, complaints, symptoms, clinical_notes, diagnosis, investigation_advice, follow_up_date, created_by)
-         VALUES (:visitId, :complaints, :symptoms, :notes, :diagnosis, :advice, :followUp, :createdBy)`,
+          (visit_id, complaints, symptoms, personal_history, complementary_requested, complementary_requested_at, complementary_requested_by,
+           clinical_notes, diagnosis, investigation_advice, follow_up_date, created_by)
+         VALUES (:visitId, :complaints, :symptoms, :personalHistory, :complementaryRequested,
+                 CASE WHEN :complementaryRequested = 1 THEN NOW() ELSE NULL END,
+                 CASE WHEN :complementaryRequested = 1 THEN :actorUserId ELSE NULL END,
+                 :notes, :diagnosis, :advice, :followUp, :createdBy)`,
         {
           visitId,
           complaints: payload.complaints || null,
           symptoms: payload.symptoms || null,
+          personalHistory: JSON.stringify(personalHistory),
+          complementaryRequested: complementaryRequested ? 1 : 0,
+          actorUserId,
           notes: payload.clinicalNotes || null,
           diagnosis: payload.diagnosis || null,
           advice: payload.investigationAdvice || null,
@@ -178,6 +242,37 @@ async function saveConsultation(visitId, payload, actorUserId) {
         }
       );
       consultationId = result.insertId;
+    }
+
+    // If an invoice already exists, synchronize the internal complementary
+    // request immediately. Normal OPD flow creates the invoice after completion,
+    // in which case billingService creates the pending request instead.
+    const [[existingInvoice]] = await conn.execute(
+      "SELECT id FROM invoices WHERE visit_id = :visitId AND status <> 'CANCELLED' ORDER BY created_at DESC LIMIT 1",
+      { visitId }
+    );
+    if (existingInvoice) {
+      const [pendingComplementary] = await conn.execute(
+        "SELECT id FROM discount_requests WHERE invoice_id = :invoiceId AND status = 'PENDING' AND reason LIKE 'Complementary consultation%'",
+        { invoiceId: existingInvoice.id }
+      );
+      if (complementaryRequested && !pendingComplementary.length) {
+        await conn.execute(
+          `INSERT INTO discount_requests
+           (invoice_id, requested_amount, requested_percentage, reason, requested_by, status)
+           VALUES (:invoiceId, NULL, 100, :reason, :requestedBy, 'PENDING')`,
+          {
+            invoiceId: existingInvoice.id,
+            reason: 'Complementary consultation — doctor requested a 100% consultation-fee waiver.',
+            requestedBy: actorUserId
+          }
+        );
+      } else if (!complementaryRequested && pendingComplementary.length) {
+        await conn.execute(
+          "UPDATE discount_requests SET status = 'CANCELLED', rejection_reason = 'Doctor removed the complementary request.' WHERE id = :id",
+          { id: pendingComplementary[0].id }
+        );
+      }
     }
 
     // Vitals (1:1 with consultation)
@@ -223,6 +318,15 @@ async function saveConsultation(visitId, payload, actorUserId) {
         { id: visitId }
       );
     }
+
+    await labService.syncDoctorRequestedTests(
+      conn,
+      visitId,
+      visit.patient_id,
+      visit.branch_id,
+      Array.isArray(payload.labTestIds) ? payload.labTestIds : (payload.labTestIds ? [payload.labTestIds] : []),
+      actorUserId
+    );
 
     await auditService.log(
       {

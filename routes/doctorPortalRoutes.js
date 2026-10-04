@@ -17,6 +17,7 @@ router.post('/queue/call-next', requirePermission('consultation.create'), csrfPr
 
 router.get('/consultation/:visitId', requirePermission('consultation.create'), asyncHandler(doctorPortalController.consultation));
 router.post('/consultation/:visitId', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.saveConsultation));
+router.post('/complaints/suggestions', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.saveComplaintSuggestion));
 router.post('/consultation/:visitId/complete', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.completeVisit));
 
 module.exports = router;

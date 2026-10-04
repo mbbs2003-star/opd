@@ -1,10 +1,11 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { pool, withTransaction } = require('../config/database');
 const authConfig = require('../config/auth');
 const auditService = require('./auditService');
 const settingsService = require('./settingsService');
 const patientService = require('./patientService');
 const AppError = require('../utils/AppError');
+const labService = require('./labService');
 
 /**
  * Deterministic default password for portal accounts auto-created at
@@ -95,6 +96,61 @@ async function createPortalAccount(patientId, payload, actorUserId) {
   });
 }
 
+
+/**
+ * Resets an existing patient's portal password from the staff patient profile.
+ * The temporary password follows the same documented default pattern used
+ * when portal accounts are created, and must_reset_password forces the patient
+ * to choose a new password after login.
+ */
+async function resetPortalPassword(patientId, actorUserId) {
+  return withTransaction(async (conn) => {
+    const [[patient]] = await conn.execute(
+      'SELECT id, name, mobile, email FROM patients WHERE id = :id AND deleted_at IS NULL FOR UPDATE',
+      { id: patientId }
+    );
+    if (!patient) throw new AppError('Patient not found', 404);
+
+    const [[account]] = await conn.execute(
+      'SELECT id, email, is_active FROM users WHERE patient_id = :patientId AND deleted_at IS NULL LIMIT 1',
+      { patientId }
+    );
+    if (!account) throw new AppError('This patient does not have a portal account yet', 404);
+    if (!account.is_active) throw new AppError('This patient portal account is inactive', 409);
+
+    const temporaryPassword = await generateDefaultPassword(patient.mobile);
+    const passwordHash = await bcrypt.hash(temporaryPassword, authConfig.bcryptRounds);
+
+    await conn.execute(
+      `UPDATE users
+       SET password_hash = :hash,
+           must_reset_password = 1,
+           failed_login_attempts = 0,
+           locked_until = NULL
+       WHERE id = :userId`,
+      { hash: passwordHash, userId: account.id }
+    );
+
+    await auditService.log(
+      {
+        userId: actorUserId,
+        action: 'PATIENT_PORTAL_PASSWORD_RESET',
+        entity: 'user',
+        entityId: account.id,
+        newValue: { patientId, email: account.email }
+      },
+      conn
+    );
+
+    return {
+      userId: account.id,
+      patientName: patient.name,
+      email: account.email,
+      temporaryPassword
+    };
+  });
+}
+
 /**
  * Everything a patient sees on their own dashboard. Always scoped by the
  * numeric patientId resolved server-side from the session (req.user.
@@ -162,7 +218,9 @@ async function getOwnDashboard(patientId) {
     { id: patientId }
   );
 
-  return { patient, upcoming, history, prescriptions, invoices };
+  const labOrders = await labService.patientOrders(patientId);
+
+  return { patient, upcoming, history, prescriptions, invoices, labOrders };
 }
 
 /**
@@ -210,4 +268,4 @@ async function updateOwnProfile(patientId, payload) {
   );
 }
 
-module.exports = { createPortalAccount, getOwnDashboard, generateDefaultPassword, updateOwnProfile };
+module.exports = { createPortalAccount, resetPortalPassword, getOwnDashboard, generateDefaultPassword, updateOwnProfile };

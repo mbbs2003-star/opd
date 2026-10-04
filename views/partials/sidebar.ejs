@@ -18,6 +18,7 @@
   <% if (isPatientPortal) { %>
     <ul class="nav flex-column hms-nav">
       <li class="nav-item"><a class="nav-link <%= active('/patient-portal') %>" href="/patient-portal"><i class="bi bi-person-heart"></i> My Health Record</a></li>
+      <li class="nav-item"><a class="nav-link <%= active('/patient-portal/lab') %>" href="/patient-portal/lab"><i class="bi bi-eyedropper"></i> Laboratory & Diagnostics</a></li>
     </ul>
   <% } else { %>
   <ul class="nav flex-column hms-nav">
@@ -51,6 +52,21 @@
     <% if (can('doctor.manage') || can('doctor.schedule.manage')) { %>
       <li class="nav-section">Doctors</li>
       <li class="nav-item"><a class="nav-link <%= active('/doctors') %>" href="/doctors"><i class="bi bi-clipboard2-pulse"></i> Doctors</a></li>
+    <% } %>
+
+    <% if (can('lab.view')) { %>
+      <li class="nav-section">Laboratory & Diagnostics</li>
+      <li class="nav-item"><a class="nav-link <%= active('/lab') %>" href="/lab"><i class="bi bi-eyedropper"></i> Laboratory / LIS</a></li>
+      <% if (can('lab.manage')) { %><li class="nav-item"><a class="nav-link <%= active('/lab/tests') %>" href="/lab/tests"><i class="bi bi-list-check"></i> Test Master</a></li><% } %>
+    <% } %>
+
+    <% if (can('pharmacy.view')) { %>
+      <li class="nav-section">Pharmacy / Medical Store</li>
+      <li class="nav-item"><a class="nav-link <%= active('/pharmacy') %>" href="/pharmacy"><i class="bi bi-capsule"></i> Pharmacy ERP</a></li>
+      <% if (can('pharmacy.pos')) { %><li class="nav-item"><a class="nav-link <%= active('/pharmacy/sales') %>" href="/pharmacy/sales"><i class="bi bi-cart3"></i> Pharmacy Billing</a></li><% } %>
+      <% if (can('pharmacy.inventory')) { %><li class="nav-item"><a class="nav-link <%= active('/pharmacy/inventory') %>" href="/pharmacy/inventory"><i class="bi bi-boxes"></i> Inventory</a></li><% } %>
+      <% if (can('pharmacy.purchase')) { %><li class="nav-item"><a class="nav-link <%= active('/pharmacy/purchases') %>" href="/pharmacy/purchases/new"><i class="bi bi-truck"></i> Purchases</a></li><% } %>
+      <% if (can('pharmacy.accounts')) { %><li class="nav-item"><a class="nav-link <%= active('/pharmacy/accounts') %>" href="/pharmacy/accounts"><i class="bi bi-calculator"></i> Accounts</a></li><% } %>
     <% } %>
 
     <% if (can('billing.view') || can('discount.approve')) { %>

@@ -89,13 +89,13 @@ WHERE r.code = 'DOCTOR'
 ON DUPLICATE KEY UPDATE role_id = role_id;
 
 -- Starter medicine master (extend freely; Pharmacy patch will expand this)
-INSERT INTO medicines (name, strength, form) VALUES
-  ('Paracetamol', '500mg', 'Tablet'),
-  ('Amoxicillin', '500mg', 'Capsule'),
-  ('Azithromycin', '500mg', 'Tablet'),
-  ('Omeprazole', '20mg', 'Capsule'),
-  ('Cetirizine', '10mg', 'Tablet'),
-  ('Metformin', '500mg', 'Tablet'),
-  ('Amlodipine', '5mg', 'Tablet'),
-  ('ORS', 'Standard', 'Sachet')
+INSERT INTO medicines (name, strength, composition, form) VALUES
+  ('Paracetamol', '500mg', 'Paracetamol 500mg', 'Tablet'),
+  ('Amoxicillin', '500mg', 'Amoxicillin 500mg', 'Capsule'),
+  ('Azithromycin', '500mg', 'Azithromycin 500mg', 'Tablet'),
+  ('Omeprazole', '20mg', 'Omeprazole 20mg', 'Capsule'),
+  ('Cetirizine', '10mg', 'Cetirizine 10mg', 'Tablet'),
+  ('Metformin', '500mg', 'Metformin 500mg', 'Tablet'),
+  ('Amlodipine', '5mg', 'Amlodipine 5mg', 'Tablet'),
+  ('ORS', 'Standard', 'Oral Rehydration Salts', 'Sachet')
 ON DUPLICATE KEY UPDATE is_active = 1;

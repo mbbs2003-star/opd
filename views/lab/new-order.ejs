@@ -1,0 +1,17 @@
+<div class="d-flex justify-content-between align-items-center mb-3"><div><h4>New Laboratory / Diagnostic Order</h4><div class="text-muted small">Book tests for an existing patient</div></div><a href="/lab/orders" class="btn btn-outline-secondary btn-sm">Back</a></div>
+<form method="POST" action="/lab/orders">
+<input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<div class="row g-3">
+<div class="col-lg-4"><div class="card"><div class="card-header">Patient</div><div class="card-body">
+<% if(patient){ %><input type="hidden" name="patientId" value="<%= patient.id %>"><div class="fw-semibold"><%= patient.name %></div><div class="small text-muted"><%= patient.health_id %> · <%= patient.mobile %></div><div class="mt-2"><a href="/patients/<%= patient.health_id %>">Open profile</a></div><% }else{ %><label class="form-label">Health ID</label><input class="form-control" name="healthId" placeholder="Search then reopen with ?healthId="><div class="small text-muted mt-2">Open this page from a patient profile to preselect the patient.</div><% } %>
+</div></div>
+<div class="card mt-3"><div class="card-header">Order details</div><div class="card-body">
+<label class="form-label">Booking date</label><input type="date" class="form-control mb-2" name="bookingDate" value="<%= today %>">
+<label class="form-label">Priority</label><select name="priority" class="form-select mb-2"><option>ROUTINE</option><option>URGENT</option><option>STAT</option></select>
+<label class="form-label">Source</label><select name="source" class="form-select mb-2"><option value="RECEPTION">Reception</option><option value="PATIENT">Patient</option><option value="DOCTOR">Doctor</option></select>
+<label class="form-label">Clinical notes</label><textarea name="clinicalNotes" class="form-control" rows="3"></textarea>
+</div></div></div>
+<div class="col-lg-8"><div class="card"><div class="card-header d-flex justify-content-between"><strong>Select Tests</strong><span class="small text-muted">Dynamic centre catalogue</span></div><div class="card-body"><% if(!patient){ %><div class="alert alert-warning">A patient must be selected before creating the order.</div><% } %><div class="row g-2">
+<% tests.forEach(function(t){ %><div class="col-md-6"><label class="border rounded p-2 d-flex gap-2 h-100"><input class="form-check-input mt-1" type="checkbox" name="testIds" value="<%= t.id %>" <%= !patient?'disabled':'' %>><span><strong><%= t.name %></strong><small class="d-block text-muted"><%= t.code %> · <%= t.test_type %> · ₹<%= Number(t.price||0).toFixed(2) %></small><% if(t.fasting_required){ %><span class="badge text-bg-warning">Fasting</span><% } %><% if(t.patient_preparation){ %><small class="d-block mt-1"><%= t.patient_preparation %></small><% } %></span></label></div><% }) %>
+</div></div><div class="card-footer text-end"><button class="btn btn-primary" <%= !patient?'disabled':'' %>>Create Order</button></div></div></div>
+</div></form>

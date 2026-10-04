@@ -57,6 +57,7 @@ router.post(
   csrfProtection,
   asyncHandler(patientPortalController.createAccount)
 );
+router.post('/:patientId/reset-portal-password', requirePermission('patient.create'), csrfProtection, asyncHandler(patientPortalController.resetPassword));
 router.get('/:healthId/slip', requirePermission('patient.view'), asyncHandler(patientController.registrationSlip));
 router.get('/:healthId/barcode', requirePermission('patient.view'), asyncHandler(patientController.barcodeImage));
 router.get('/:healthId/edit', requirePermission('patient.edit'), asyncHandler(patientController.showEditForm));

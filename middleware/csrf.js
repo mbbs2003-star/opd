@@ -2,21 +2,10 @@ const { doubleCsrf } = require('csrf-csrf');
 const appConfig = require('../config/appConfig');
 const authConfig = require('../config/auth');
 
-/**
- * package.json pins "csrf-csrf": "^3.0.6", which npm resolves to 3.0.7 —
- * the last 3.x release before the 4.0.0 rename (confirmed: v4 renamed
- * generateToken -> generateCsrfToken, getTokenFromRequest ->
- * getCsrfTokenFromRequest, and made getSessionIdentifier a required
- * option). We deliberately do NOT pass getSessionIdentifier here: it is
- * not part of the confirmed v3.0.x API, and passing it previously caused
- * an "invalid csrf token" 403 immediately after login — the token/cookie
- * pair generated before login became session-bound, and
- * req.session.regenerate() on successful login (which intentionally
- * issues a new session id, to prevent session fixation) then invalidated
- * it a moment later.
- */
+/** CSRF protection uses session-bound tokens so a token cannot be replayed after session rotation. */
 const csrfUtils = doubleCsrf({
   getSecret: () => authConfig.csrfSecret,
+  getSessionIdentifier: (req) => req.session.id,
   cookieName: appConfig.isProd ? '__Host-hms.csrf' : 'hms.csrf',
   cookieOptions: {
     httpOnly: true,
@@ -24,17 +13,36 @@ const csrfUtils = doubleCsrf({
     secure: appConfig.isProd,
     path: '/'
   },
-  getTokenFromRequest: (req) => req.body._csrf || req.headers['x-csrf-token']
+  // csrf-csrf v4 calls this getCsrfTokenFromRequest; v3 calls it
+  // getTokenFromRequest. Supplying both keeps this middleware compatible
+  // with existing deployments whose node_modules still contain v3.
+  getCsrfTokenFromRequest: (req) => {
+    const bodyToken = typeof req.body?._csrf === 'string' ? req.body._csrf : null;
+    const headerToken = typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : null;
+    return bodyToken || headerToken;
+  },
+  getTokenFromRequest: (req) => {
+    const bodyToken = typeof req.body?._csrf === 'string' ? req.body._csrf : null;
+    const headerToken = typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : null;
+    return bodyToken || headerToken;
+  }
 });
 
 const doubleCsrfProtection = csrfUtils.doubleCsrfProtection;
-const generate = csrfUtils.generateToken || csrfUtils.generateCsrfToken;
+const generateV4 = csrfUtils.generateCsrfToken;
+const generateV3 = csrfUtils.generateToken;
 
-if (typeof generate !== 'function') {
+if (typeof generateV4 !== 'function' && typeof generateV3 !== 'function') {
   throw new Error(
-    'csrf-csrf did not expose a token-generation function (expected generateToken or generateCsrfToken). ' +
-      'Check the installed csrf-csrf version against middleware/csrf.js.'
+    'csrf-csrf did not expose a supported token-generation function. ' +
+      'Install csrf-csrf 4.x (preferred) or 3.x.'
   );
+}
+
+// v4 uses an options object; v3 uses a boolean third argument.
+function generate(req, res, options) {
+  if (typeof generateV4 === 'function') return generateV4(req, res, options);
+  return generateV3(req, res, Boolean(options && options.overwrite));
 }
 
 /** Makes the current CSRF token available to every EJS view as `csrfToken`. */
@@ -55,7 +63,7 @@ function exposeCsrfToken(req, res, next) {
  * braces on top of the getSessionIdentifier fix above.
  */
 function rotateCsrfToken(req, res) {
-  return generate(req, res, true);
+  return generate(req, res, { overwrite: true });
 }
 
 module.exports = { csrfProtection: doubleCsrfProtection, exposeCsrfToken, rotateCsrfToken };

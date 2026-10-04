@@ -91,13 +91,21 @@ async function consultation(req, res, next) {
     if (!context) throw new AppError('Visit not found', 404);
 
     const [medicines] = await pool.execute(
-      'SELECT id, name, strength, form FROM medicines WHERE is_active = 1 ORDER BY name LIMIT 500'
+      'SELECT id, name, strength, composition, form FROM medicines WHERE is_active = 1 ORDER BY name LIMIT 500'
+    );
+    const [formOptions] = await pool.execute(
+      "SELECT value FROM prescription_option_values WHERE option_type = 'FORM' ORDER BY value"
+    );
+    const [routeOptions] = await pool.execute(
+      "SELECT value FROM prescription_option_values WHERE option_type = 'ROUTE' ORDER BY value"
     );
 
     res.render('doctors/consultation', {
       title: `Consultation — ${context.visit.patient_name}`,
       ...context,
-      medicines
+      medicines,
+      formOptions: formOptions.map(x => x.value),
+      routeOptions: routeOptions.map(x => x.value)
     });
   } catch (err) {
     next(err);
@@ -163,4 +171,25 @@ async function updateProfile(req, res, next) {
   }
 }
 
-module.exports = { dashboard, queue, callNext, consultation, saveConsultation, completeVisit, profile, updateProfile };
+
+async function saveComplaintSuggestion(req, res, next) {
+  try {
+    const doctorId = requireDoctorContext(req);
+    const complaint = String(req.body.complaint || '').trim().replace(/\s+/g, ' ');
+    if (!doctorId) throw new AppError('A doctor account is required', 403);
+    if (!complaint || complaint.length < 2) return res.status(422).json({ ok: false, message: 'Complaint is too short.' });
+    if (complaint.length > 255) return res.status(422).json({ ok: false, message: 'Complaint is too long.' });
+
+    await pool.execute(
+      `INSERT INTO doctor_complaint_suggestions (doctor_id, complaint, normalized)
+       VALUES (:doctorId, :complaint, :normalized)
+       ON DUPLICATE KEY UPDATE complaint = VALUES(complaint), updated_at = NOW()`,
+      { doctorId, complaint, normalized: complaint.toLowerCase() }
+    );
+    res.json({ ok: true, complaint });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { dashboard, queue, callNext, consultation, saveConsultation, completeVisit, profile, updateProfile, saveComplaintSuggestion };

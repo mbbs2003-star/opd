@@ -4,6 +4,7 @@ const healthIdService = require('./healthIdService');
 const aadhaarUtil = require('../utils/aadhaarUtil');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const labService = require('./labService');
 
 /** Registration Number format: REG-YY-BB-NNNNNN */
 async function generateRegistrationNumber(conn, branchCode, at = new Date()) {
@@ -203,7 +204,8 @@ async function getPatientProfile(healthIdOrId) {
     `SELECT p.*, pa.address, pa.village_town, pa.police_station, pa.district, pa.state, pa.pin_code,
             m.blood_group, m.height_cm, m.weight_kg, m.allergies, m.existing_conditions,
             m.emergency_contact, m.emergency_contact_relation,
-            b.name AS branch_name
+            b.name AS branch_name,
+            EXISTS(SELECT 1 FROM users pu WHERE pu.patient_id = p.id AND pu.deleted_at IS NULL) AS portal_account_exists
      FROM patients p
      LEFT JOIN patient_addresses pa ON pa.patient_id = p.id
      LEFT JOIN patient_medical_profiles m ON m.patient_id = p.id
@@ -223,7 +225,8 @@ async function getPatientProfile(healthIdOrId) {
     `SELECT v.id AS visit_id, v.visit_code, v.checked_in_at, v.status,
             d.doctor_code, du.name AS doctor_name, dept.name AS department_name,
             c.diagnosis, c.follow_up_date,
-            i.id AS invoice_id, i.invoice_number, i.status AS invoice_status, i.net_amount
+            i.id AS invoice_id, i.invoice_number, i.status AS invoice_status, i.net_amount,
+            (SELECT pr.id FROM prescriptions pr WHERE pr.visit_id = v.id AND pr.is_current = 1 ORDER BY pr.version DESC LIMIT 1) AS prescription_id
      FROM opd_visits v
      JOIN doctors d ON d.id = v.doctor_id
      JOIN users du ON du.id = d.user_id
@@ -265,7 +268,8 @@ async function getPatientProfile(healthIdOrId) {
     { id: patient.id }
   );
 
-  return { patient, opdHistory, prescriptions, billing, prescriptionAttachments };
+  const labOrders = await labService.patientOrders(patient.id);
+  return { patient, opdHistory, prescriptions, billing, prescriptionAttachments, labOrders };
 }
 
 /**

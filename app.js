@@ -11,9 +11,11 @@ const methodOverride = require('method-override');
 const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 const appConfig = require('./config/appConfig');
 const { attachUser } = require('./middleware/auth');
+const { maintenanceGate } = require('./middleware/maintenance');
 const { attachClientIp } = require('./middleware/audit');
 const { exposeCsrfToken } = require('./middleware/csrf');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
@@ -36,7 +38,7 @@ const sessionStore = new MySQLStore({
 });
 
 app.disable('x-powered-by');
-app.set('trust proxy', 1);
+app.set('trust proxy', appConfig.isProd ? Number(process.env.TRUST_PROXY || 1) : false);
 
 // ---- View engine ----------------------------------------------------
 app.set('view engine', 'ejs');
@@ -47,6 +49,7 @@ app.set('layout', 'layouts/main');
 // ---- Security headers -------------------------------------------------
 app.use(
   helmet({
+    hsts: appConfig.isProd ? { maxAge: 15552000, includeSubDomains: true, preload: true } : false,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -58,7 +61,8 @@ app.use(
         // console-visible server error.
         scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:', 'https://images.pexels.com'],
-        fontSrc: ["'self'", 'cdn.jsdelivr.net']
+        fontSrc: ["'self'", 'cdn.jsdelivr.net'],
+        upgradeInsecureRequests: appConfig.isProd ? [] : null
       }
     }
   })
@@ -66,9 +70,8 @@ app.use(
 app.use(compression());
 
 // ---- Body / cookies ----------------------------------------------------
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb', parameterLimit: 200 }));
 app.use(express.json({ limit: '2mb' }));
-app.use(cookieParser());
 app.use(methodOverride('_method'));
 
 // ---- Static assets -------------------------------------------------
@@ -90,9 +93,17 @@ app.use(
     }
   })
 );
+app.use(cookieParser());
+
 app.use(flash());
 
 // ---- Request-scoped helpers -----------------------------------------
+app.use((req, res, next) => {
+  const suppliedId = String(req.headers['x-request-id'] || '');
+  req.requestId = /^[A-Za-z0-9._-]{1,80}$/.test(suppliedId) ? suppliedId : crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.requestId);
+  next();
+});
 app.use(attachClientIp);
 app.use(attachUser);
 app.use(exposeCsrfToken);
@@ -114,6 +125,12 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// ---- Global maintenance gate -----------------------------------------
+// Runs after session/user loading so SUPER_ADMIN can bypass maintenance.
+// Auth login/logout/reset remain reachable so a Super Admin can enter the
+// system and disable maintenance mode.
+app.use(maintenanceGate);
+
 // ---- Rate limiting for auth ------------------------------------------
 const loginLimiter = rateLimit({
   windowMs: appConfig.rateLimit.loginWindowMs,
@@ -123,6 +140,15 @@ const loginLimiter = rateLimit({
   message: 'Too many login attempts. Please try again later.'
 });
 app.use('/auth/login', loginLimiter);
+
+const generalLimiter = rateLimit({
+  windowMs: Number(process.env.GENERAL_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: Number(process.env.GENERAL_RATE_LIMIT_MAX) || 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.startsWith('/images/') || req.path === '/manifest.json'
+});
+app.use(generalLimiter);
 
 // ---- Routes ----------------------------------------------------------
 app.use('/auth', require('./routes/authRoutes'));
@@ -137,6 +163,8 @@ app.use('/billing', require('./routes/billingRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
 app.use('/reports', require('./routes/reportRoutes'));
 app.use('/scan', require('./routes/scanRoutes'));
+app.use('/lab', require('./routes/labRoutes'));
+app.use('/pharmacy', require('./routes/pharmacyRoutes'));
 
 app.get('/manifest.json', async (req, res, next) => {
   try {

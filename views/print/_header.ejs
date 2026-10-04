@@ -1,8 +1,7 @@
-<div class="print-header">
-  <% if (typeof siteSettings !== 'undefined' && siteSettings.logo_path) { %>
-    <img src="<%= siteSettings.logo_path %>" alt="Logo" style="max-height:56px;max-width:220px;margin-bottom:6px;">
-  <% } %>
-  <div class="hospital-name"><%= (typeof siteSettings !== 'undefined' ? siteSettings.hospital_name : 'CHHAYABITHI').toUpperCase() %></div>
+<div class="print-header chhayabithi-letterhead">
+  <div class="letterhead-brand">
+    <img src="/images/chhayabithi-logo.webp" alt="CHHAYABITHI logo" class="letterhead-logo" width="220" height="68">
+  </div>
   <div class="hospital-sub"><%= typeof siteSettings !== 'undefined' ? siteSettings.hospital_tagline : 'Multi-Specialty Clinic & Diagnostic Centre' %></div>
   <div class="hospital-addr"><%= typeof siteSettings !== 'undefined' ? siteSettings.contact_address : '' %></div>
   <div class="hospital-addr">

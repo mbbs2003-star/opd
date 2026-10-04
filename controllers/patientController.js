@@ -55,8 +55,18 @@ async function createPortalAccountSilently(registrationResult, email, actorUserI
   });
 }
 
-function showSearch(req, res) {
-  res.render('patients/search', { title: 'Patient Search' });
+async function showSearch(req, res, next) {
+  const q = String(req.query.q || '').trim();
+  if (!q) {
+    return res.render('patients/search', { title: 'Patient Search', q: '' });
+  }
+
+  try {
+    const results = await patientService.searchPatients({ q });
+    return res.render('patients/search', { title: 'Patient Search', results, q });
+  } catch (err) {
+    return next(err);
+  }
 }
 
 async function searchResults(req, res, next) {

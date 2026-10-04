@@ -6,6 +6,9 @@ const barcodeService = require('../services/barcodeService');
 const opdService = require('../services/opdService');
 const doctorService = require('../services/doctorService');
 const scheduleService = require('../services/scheduleService');
+const labService = require('../services/labService');
+const { uploadDir } = require('../utils/labReportUpload');
+const path = require('path');
 const { pool } = require('../config/database');
 const AppError = require('../utils/AppError');
 
@@ -121,6 +124,118 @@ async function createAccount(req, res, next) {
     }
     next(err);
   }
+}
+
+
+/** Staff-side: reset the portal password for a specific patient profile. */
+async function resetPassword(req, res, next) {
+  try {
+    const result = await patientPortalService.resetPortalPassword(req.params.patientId, req.user.id);
+
+    req.flash(
+      'success',
+      `Portal password reset for ${result.patientName}. Temporary password: ${result.temporaryPassword} (also emailed if SMTP is configured).`
+    );
+
+    if (result.email) {
+      emailService
+        .notifyPasswordReset({
+          to: result.email,
+          name: result.patientName,
+          email: result.email,
+          temporaryPassword: result.temporaryPassword
+        })
+        .catch(() => {});
+    }
+
+    res.redirect(`/patients/${req.body.healthId || ''}`.replace(/\/$/, '') || '/patients');
+  } catch (err) {
+    if (err instanceof AppError) {
+      req.flash('errors', [{ message: err.message }]);
+      return res.redirect(`/patients/${req.body.healthId || ''}`);
+    }
+    next(err);
+  }
+}
+
+
+async function showLab(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await patientPortalService.getOwnDashboard(patientId);
+    const tests=await labService.getAvailableTestsForBranch(data.patient.branch_id);
+    res.render('patient-portal/lab',{title:'My Laboratory & Diagnostics',patient:data.patient,orders:data.labOrders,tests});
+  }catch(err){next(err);}
+}
+
+async function bookLab(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await patientPortalService.getOwnDashboard(patientId);
+    const testIds=Array.isArray(req.body.testIds)?req.body.testIds:(req.body.testIds?[req.body.testIds]:[]);
+    const result=await labService.createOrder(patientId,data.patient.branch_id,req.user.id,{
+      testIds,source:'PATIENT',bookingDate:req.body.bookingDate,priority:req.body.priority,clinicalNotes:req.body.clinicalNotes
+    });
+    req.flash('success','Test booking '+result.orderCode+' has been created. Track it from your laboratory dashboard.');
+    res.redirect('/patient-portal/lab/orders/'+result.id);
+  }catch(err){
+    if(err instanceof AppError){req.flash('errors',[{message:err.message}]);return res.redirect('/patient-portal/lab');}
+    next(err);
+  }
+}
+
+async function viewLabOrder(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await labService.getOrder(req.params.id);
+    if(!data || Number(data.order.patient_id)!==Number(patientId))throw new AppError('Laboratory order not found',404);
+    res.render('patient-portal/lab-order',{title:data.order.order_code+' · Laboratory Order',...data});
+  }catch(err){next(err);}
+}
+
+async function cancelLabOrder(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await labService.getOrder(req.params.id);
+    if(!data || Number(data.order.patient_id)!==Number(patientId))throw new AppError('Laboratory order not found',404);
+    await labService.cancelOrder(data.order.id,req.user.id,req.body.reason||'Cancelled by patient',true);
+    req.flash('success','Laboratory booking cancelled.');
+    res.redirect('/patient-portal/lab');
+  }catch(err){
+    if(err instanceof AppError){req.flash('errors',[{message:err.message}]);return res.redirect('/patient-portal/lab/orders/'+req.params.id);}
+    next(err);
+  }
+}
+
+async function viewLabReport(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await labService.patientReport(req.params.id,patientId);
+    if(!data)throw new AppError('Released laboratory report not found',404);
+    res.render('patient-portal/lab-report',{title:data.result.test_name_snapshot+' · Report',...data});
+  }catch(err){next(err);}
+}
+
+async function printLabReport(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await labService.patientReport(req.params.id,patientId);
+    if(!data)throw new AppError('Released laboratory report not found',404);
+    res.render('print/lab-report',{layout:'layouts/blank',title:'Laboratory Report',...data});
+  }catch(err){next(err);}
+}
+
+async function downloadLabReportFile(req,res,next){
+  try{
+    const patientId=requirePatientContext(req);
+    const data=await labService.patientReport(req.params.id,patientId);
+    if(!data || !data.result.report_storage_path)throw new AppError('Digital report file not found',404);
+    const absolute=path.resolve(data.result.report_storage_path);
+    const root=path.resolve(uploadDir);
+    if(!absolute.startsWith(root+path.sep))throw new AppError('Invalid report file path',403);
+    const filename=String(data.result.report_file_name||'lab-report').replace(/["\\\\]/g,'');
+    res.sendFile(absolute,{headers:{'Content-Disposition':'inline; filename="'+filename+'"'}});
+  }catch(err){next(err);}
 }
 
 // ---- Self-service booking ----------------------------------------------
@@ -256,10 +371,18 @@ module.exports = {
   viewInvoice,
   printReceipt,
   createAccount,
+  resetPassword,
   showBookForm,
   doctorsByDepartment,
   doctorSlots,
   book,
   showEditProfile,
-  updateOwnProfile
+  updateOwnProfile,
+  showLab,
+  bookLab,
+  viewLabOrder,
+  cancelLabOrder,
+  viewLabReport,
+  printLabReport,
+  downloadLabReportFile
 };

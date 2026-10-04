@@ -23,6 +23,8 @@ function normalizeItems(rawItems) {
 function itemsFromBody(body) {
   const names = [].concat(body.medicineName || []);
   const medicineIds = [].concat(body.medicineId || []);
+  const compositions = [].concat(body.composition || []);
+  const forms = [].concat(body.medicineForm || []);
   const dosages = [].concat(body.dosage || []);
   const frequencies = [].concat(body.frequency || []);
   const durations = [].concat(body.duration || []);
@@ -36,6 +38,8 @@ function itemsFromBody(body) {
     items.push({
       medicineId: medicineIds[i] ? Number(medicineIds[i]) || null : null,
       medicineName: String(names[i]).trim(),
+      composition: compositions[i] || null,
+      medicineForm: forms[i] || null,
       dosage: dosages[i] || null,
       frequency: frequencies[i] || null,
       duration: durations[i] || null,
@@ -91,6 +95,7 @@ async function createPrescription(visitId, items, actorUserId) {
     );
     const prescriptionId = result.insertId;
 
+    await rememberPrescriptionOptions(conn, items, actorUserId);
     await insertItems(conn, prescriptionId, items);
 
     await auditService.log(
@@ -108,17 +113,34 @@ async function createPrescription(visitId, items, actorUserId) {
   });
 }
 
+async function rememberPrescriptionOptions(conn, items, actorUserId) {
+  for (const item of items) {
+    for (const [optionType, value] of [['FORM', item.medicineForm], ['ROUTE', item.route]]) {
+      const clean = String(value || '').trim();
+      if (!clean || clean.toLowerCase() === 'other') continue;
+      await conn.execute(
+        `INSERT INTO prescription_option_values (option_type, value, normalized)
+         VALUES (:optionType, :value, :normalized)
+         ON DUPLICATE KEY UPDATE value = VALUES(value)`,
+        { optionType, value: clean, normalized: clean.toLowerCase() }
+      );
+    }
+  }
+}
+
 async function insertItems(conn, prescriptionId, items) {
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
     await conn.execute(
       `INSERT INTO prescription_items
-        (prescription_id, medicine_id, medicine_name_freetext, dosage, frequency, duration, route, quantity, instructions, sort_order)
-       VALUES (:prescriptionId, :medicineId, :name, :dosage, :frequency, :duration, :route, :quantity, :instructions, :sortOrder)`,
+        (prescription_id, medicine_id, medicine_name_freetext, composition, medicine_form, dosage, frequency, duration, route, quantity, instructions, sort_order)
+       VALUES (:prescriptionId, :medicineId, :name, :composition, :medicineForm, :dosage, :frequency, :duration, :route, :quantity, :instructions, :sortOrder)`,
       {
         prescriptionId,
         medicineId: it.medicineId || null,
         name: it.medicineName,
+        composition: it.composition || null,
+        medicineForm: it.medicineForm || null,
         dosage: it.dosage || null,
         frequency: it.frequency || null,
         duration: it.duration || null,
@@ -168,6 +190,7 @@ async function amendPrescription(prescriptionId, items, reason, actorUserId) {
     );
     const newId = result.insertId;
 
+    await rememberPrescriptionOptions(conn, items, actorUserId);
     await insertItems(conn, newId, items);
 
     await auditService.log(
@@ -193,7 +216,17 @@ async function getPrescription(prescriptionId) {
             u.name AS doctor_name, d.qualification, d.professional_reg_number, d.specialisation,
             dept.name AS department_name,
             c.diagnosis, c.investigation_advice, c.follow_up_date, c.complaints,
-            vt.bp, vt.pulse, vt.temperature, vt.spo2, vt.weight_kg, vt.height_cm,
+            c.symptoms, c.personal_history, c.clinical_notes,
+            c.complementary_requested,
+            a.lmp_date, a.gravida, a.para, a.abortions, a.pregnancy_status,
+            a.gestational_age_weeks, a.gestational_age_days, a.estimated_due_date, a.obstetric_notes,
+            COALESCE(av.bp, vt.bp) AS bp,
+            COALESCE(av.pulse, vt.pulse) AS pulse,
+            COALESCE(av.temperature, vt.temperature) AS temperature,
+            COALESCE(av.spo2, vt.spo2) AS spo2,
+            COALESCE(av.weight_kg, vt.weight_kg) AS weight_kg,
+            COALESCE(av.height_cm, vt.height_cm) AS height_cm,
+            av.respiratory_rate,
             v.visit_code, b.name AS branch_name
      FROM prescriptions pr
      JOIN patients p ON p.id = pr.patient_id
@@ -206,15 +239,18 @@ async function getPrescription(prescriptionId) {
      JOIN branches b ON b.id = v.branch_id
      LEFT JOIN opd_consultations c ON c.visit_id = pr.visit_id
      LEFT JOIN vitals vt ON vt.consultation_id = c.id
+     LEFT JOIN appointment_vitals av ON av.visit_id = pr.visit_id
      WHERE pr.id = :id`,
     { id: prescriptionId }
   );
   if (!prescription) return null;
 
-  const [items] = await pool.execute(
+  let [items] = await pool.execute(
     'SELECT * FROM prescription_items WHERE prescription_id = :id ORDER BY sort_order',
     { id: prescriptionId }
   );
+  const { buildPrescriptionInstructions } = require('../utils/prescriptionText');
+  items = items.map(item => ({ ...item, prescriptionText: buildPrescriptionInstructions(item) }));
 
   const [versions] = await pool.execute(
     `SELECT id, version, is_current, amendment_reason, created_at
