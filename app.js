@@ -169,7 +169,7 @@ app.use('/pharmacy', require('./routes/pharmacyRoutes'));
 app.get('/manifest.json', async (req, res, next) => {
   try {
     const settings = await settingsService.getSettings();
-    const icon = settings.logo_path || '/images/pwa-icon-512.svg';
+    const icon = '/images/chhayabithi-icon.svg';
     res.json({
       name: settings.hospital_name + ' HMS',
       short_name: settings.hospital_name,
@@ -183,8 +183,7 @@ app.get('/manifest.json', async (req, res, next) => {
       theme_color: '#0d6e6e',
       orientation: 'portrait-primary',
       icons: [
-        { src: settings.logo_path || '/images/pwa-icon-192.svg', sizes: '192x192', type: settings.logo_path ? 'image/png' : 'image/svg+xml', purpose: 'any maskable' },
-        { src: icon, sizes: '512x512', type: settings.logo_path ? 'image/png' : 'image/svg+xml', purpose: 'any maskable' }
+        { src: icon, sizes: '192x192 512x512', type: 'image/svg+xml', purpose: 'any maskable' }
       ]
     });
   } catch (err) {
