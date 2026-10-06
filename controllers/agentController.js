@@ -116,7 +116,7 @@ async function bookTest(req,res,next){
       bookingDate:req.body.bookingDate,
       priority:req.body.priority||'ROUTINE',
       clinicalNotes:req.body.clinicalNotes,
-      referralCode:agentService.referralCode(req.body.referralCode,req.user.id)
+      referralCode:agentService.requireReferralCode(req.body.referralCode,req.user.id)
     });
     req.flash('success',`Diagnostic booking ${result.orderCode} created for ${patient.name}.`);
     res.redirect('/agent/patients');
