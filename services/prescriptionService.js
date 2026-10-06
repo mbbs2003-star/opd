@@ -150,7 +150,7 @@ async function savePrescriptionInTransaction(conn, visit, items, actorUserId, rx
       doctorId: visit.doctor_id,
       version,
       barcode: visit.health_id,
-      rxNotes: null,
+      rxNotes: String(rxNotes || '').trim() || null,
       amendedFrom,
       reason: current ? 'Doctor updated consultation and prescription.' : null,
       createdBy: actorUserId
