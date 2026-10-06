@@ -315,7 +315,7 @@ async function cancelOrder(orderId,actorUserId,reason,patientInitiated=false) {
 }
 
 async function patientOrders(patientId) {
-  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.cancellation_reason,o.referral_code,rp.provider_name AS referral_provider_name,l.name laboratory_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE o.patient_id=:patientId GROUP BY o.id ORDER BY o.created_at DESC',{patientId});
+  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.cancellation_reason,o.referral_code,rp.provider_name AS referral_provider_name,l.name laboratory_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN referral_providers rp ON rp.id=o.referral_provider_id LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE o.patient_id=:patientId GROUP BY o.id ORDER BY o.created_at DESC',{patientId});
   return rows;
 }
 
