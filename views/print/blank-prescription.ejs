@@ -40,7 +40,7 @@
     </div>
 
     <div class="blank-prescription-patient">
-      <strong><%= appointment.patient_name %></strong>
+      <strong>Patient Name: <%= appointment.patient_name %></strong>
       <span><%= appointment.age_years || '—' %> yrs · <%= appointment.gender || '—' %></span>
       <span>Health ID: <strong><%= appointment.health_id %></strong></span>
       <% if (appointment.mobile) { %><span>Mob: <%= appointment.mobile %></span><% } %>
