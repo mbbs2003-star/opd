@@ -366,6 +366,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
   version SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   is_current TINYINT(1) NOT NULL DEFAULT 1,
   barcode_value VARCHAR(20) NOT NULL,     -- the patient's Health ID
+  rx_notes TEXT NULL,
   amended_from_id INT UNSIGNED NULL,
   amendment_reason VARCHAR(500) NULL,
   created_by INT UNSIGNED NOT NULL,
