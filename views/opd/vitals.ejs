@@ -52,7 +52,7 @@
           <label class="form-label">Last Menstrual Period (LMP)</label>
           <input type="date" class="form-control" name="lmpDate" id="lmpDate" value="<%= pregnancy.lmp_date ? String(pregnancy.lmp_date).slice(0,10) : '' %>">
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-4 col-lg-2" id="gravidaField">
           <label class="form-label">Gravida (G)</label>
           <input type="number" min="0" class="form-control" name="gravida" value="<%= pregnancy.gravida ?? '' %>">
         </div>
@@ -70,6 +70,7 @@
         </div>
       </div>
 
+      <div id="pregnancyError" class="alert alert-danger d-none mt-3 mb-0" role="alert"></div>
       <div id="pregnancyResults" class="pregnancy-results mt-4 <%= pregnancyCalculation ? '' : 'd-none' %>">
         <div class="small text-uppercase fw-bold text-info mb-2">Automatic Pregnancy Calculator</div>
         <div class="row g-2">
@@ -126,6 +127,8 @@
   const trimester = document.getElementById('trimesterResult');
   const remaining = document.getElementById('remainingResult');
   const statusResult = document.getElementById('pregnancyStatusResult');
+  const gravidaField = document.getElementById('gravidaField');
+  const error = document.getElementById('pregnancyError');
   if (!status || !lmp) return;
 
   function parseDate(value) {
@@ -138,13 +141,23 @@
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
   function calculate() {
-    if (status.value !== 'PREGNANT') { results.classList.add('d-none'); return; }
+    if (gravidaField) gravidaField.style.display = status.value === 'PREGNANT' ? '' : 'none';
+    if (error) { error.classList.add('d-none'); error.textContent = ''; }
+    if (status.value !== 'PREGNANT') { results.classList.add('d-none'); return true; }
     const l = parseDate(lmp.value);
-    if (!l) { results.classList.add('d-none'); return; }
+    if (!l) {
+      results.classList.add('d-none');
+      if (error) { error.textContent = 'Invalid input: please enter a valid Last Menstrual Period (LMP) date.'; error.classList.remove('d-none'); }
+      return false;
+    }
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const elapsed = Math.floor((today - l) / 86400000);
-    if (elapsed < 0) { results.classList.add('d-none'); return; }
+    if (elapsed < 0) {
+      results.classList.add('d-none');
+      if (error) { error.textContent = 'Invalid input: LMP cannot be a future date.'; error.classList.remove('d-none'); }
+      return false;
+    }
     const weeks = Math.floor(elapsed / 7), days = elapsed % 7;
     const ed = new Date(l.getFullYear(), l.getMonth(), l.getDate());
     ed.setDate(ed.getDate() + 280);
@@ -155,9 +168,16 @@
     remaining.textContent = Math.floor(remainingDays/7) + 'w ' + (remainingDays%7) + 'd';
     statusResult.textContent = elapsed > 280 ? 'Past estimated due date' : 'Within estimated pregnancy period';
     results.classList.remove('d-none');
+    return true;
   }
   status.addEventListener('change', calculate);
   lmp.addEventListener('change', calculate);
+  document.querySelector('form.vitals-workspace')?.addEventListener('submit', function(e) {
+    if (status.value === 'PREGNANT' && !calculate()) {
+      e.preventDefault();
+      error?.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  });
   calculate();
 })();
 </script>
