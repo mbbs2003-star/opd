@@ -116,6 +116,8 @@ async function saveTestParameters(testId,payload,actorUserId) {
 
 async function createOrder(patientId,branchId,actorUserId,payload={}) {
   return withTransaction(async conn=>{
+    const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
+    const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
     const [[patient]]=await conn.execute('SELECT id,name,health_id,branch_id,referral_code,referral_provider_id FROM patients WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:patientId});
     if(!patient) throw new AppError('Patient not found',404);
 
