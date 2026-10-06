@@ -5,7 +5,7 @@ const authConfig = require('../config/auth');
 /** CSRF protection uses session-bound tokens so a token cannot be replayed after session rotation. */
 const csrfUtils = doubleCsrf({
   getSecret: () => authConfig.csrfSecret,
-  getSessionIdentifier: (req) => req.session.id,
+  getSessionIdentifier: (req) => req.session?.id || req.sessionID || 'anonymous',
   cookieName: appConfig.isProd ? '__Host-hms.csrf' : 'hms.csrf',
   cookieOptions: {
     httpOnly: true,
