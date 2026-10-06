@@ -171,6 +171,8 @@
     patientPicker.classList.remove('d-none');
   });
 
+  toggleObstetric('<%= patient ? patient.gender : '' %>');
+
   // Pregnancy calculator for the female assessment.
   const pregnancyStatus = document.getElementById('pregnancyStatus');
   const pregnancyMethod = document.getElementById('pregnancyMethod');
