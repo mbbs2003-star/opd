@@ -9,5 +9,8 @@
 <div class="col-md-4"><label class="form-label">Slot Time *</label><input type="time" name="slotTime" class="form-control" required></div>
 <div class="col-md-8"><label class="form-label">Reason</label><input name="reason" class="form-control"></div>
 </div></div></div>
-<div class="card mb-3"><div class="card-header"><strong>Female / Obstetric Assessment</strong></div><div class="card-body"><div class="row g-3"><div class="col-md-3"><label class="form-label">Pregnancy Status</label><select name="pregnancyStatus" class="form-select"><option value="UNKNOWN">Unknown</option><option value="NOT_PREGNANT">Not Pregnant</option><option value="PREGNANT">Pregnant</option></select></div><div class="col-md-3"><label class="form-label">LMP</label><input type="date" name="lmpDate" class="form-control"></div><div class="col-md-2"><label class="form-label">Gravida (G)</label><input type="number" name="gravida" min="0" class="form-control"></div><div class="col-md-2"><label class="form-label">Para (P)</label><input type="number" name="para" min="0" class="form-control"></div><div class="col-md-2"><label class="form-label">Abortions</label><input type="number" name="abortions" min="0" class="form-control"></div><div class="col-12"><label class="form-label">Obstetric Notes</label><textarea name="obstetricNotes" class="form-control" rows="2"></textarea></div></div></div></div>
-<div class="text-end"><button class="btn btn-primary btn-lg">Book OPD Appointment</button></div></form>
+<% if (patient && String(patient.gender || '').toLowerCase() === 'female') { %>
+<div class="mb-3">
+  <%- include('../partials/pregnancy-assessment', { pregnancy: patient, pregnancyCalculation: null }) %>
+</div>
+<% } %><div class="text-end"><button class="btn btn-primary btn-lg">Book OPD Appointment</button></div></form>
