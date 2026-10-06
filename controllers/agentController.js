@@ -38,7 +38,7 @@ async function createPatient(req,res,next){
     if(!name || !gender || !mobile || !req.body.referralCode){
       throw new AppError('Patient name, gender, mobile number and referral number are required.',422);
     }
-    if(!/^[6-9]\\d{9}$/.test(mobile)){
+    if(!/^[6-9]\d{9}$/.test(mobile)){
       throw new AppError('Enter a valid 10-digit Indian mobile number.',422);
     }
     const result=await agentService.registerPatient(req.body,req.user.id,branchId(req));
