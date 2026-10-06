@@ -342,8 +342,8 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           gravida: pregnancyStatus === 'PREGNANT' && payload.gravida !== '' && payload.gravida != null
             ? Math.max(0, Number(payload.gravida))
             : null,
-          para: payload.para === '' || payload.para == null ? null : Math.max(0, Number(payload.para)),
-          abortions: payload.abortions === '' || payload.abortions == null ? null : Math.max(0, Number(payload.abortions)),
+          para: isFemale && payload.para !== '' && payload.para != null ? Math.max(0, Number(payload.para)) : null,
+          abortions: isFemale && payload.abortions !== '' && payload.abortions != null ? Math.max(0, Number(payload.abortions)) : null,
           pregnancyStatus,
           gestationalWeeks: payload.gestationalAgeWeeks === '' || payload.gestationalAgeWeeks == null ? null : Number(payload.gestationalAgeWeeks),
           gestationalDays: payload.gestationalAgeDays === '' || payload.gestationalAgeDays == null ? null : Number(payload.gestationalAgeDays),
