@@ -11,6 +11,11 @@ function makeOtp() {
   return String(crypto.randomInt(100000, 1000000));
 }
 
+function normalizeOtp(otp) {
+  const value = String(otp ?? '').trim().replace(/[\u00a0\s-]/g, '');
+  return /^\d{6}$/.test(value) ? value : null;
+}
+
 function hashOtp(otp) {
   return crypto.createHash('sha256').update(String(otp)).digest('hex');
 }
@@ -54,6 +59,9 @@ async function issueOtp(purpose, email, payload = null) {
 
 async function consumeOtp(purpose, email, otp) {
   const normalized = String(email || '').trim().toLowerCase();
+  const normalizedOtp = normalizeOtp(otp);
+  if (!normalizedOtp) throw new AppError('Enter the 6-digit verification code.', 422);
+
   const [rows] = await pool.execute(
     `SELECT * FROM auth_otps
      WHERE purpose = :purpose AND email = :email AND consumed_at IS NULL AND expires_at > NOW()
@@ -67,7 +75,7 @@ async function consumeOtp(purpose, email, otp) {
 
   const valid = crypto.timingSafeEqual(
     Buffer.from(record.otp_hash, 'hex'),
-    Buffer.from(hashOtp(otp), 'hex')
+    Buffer.from(hashOtp(normalizedOtp), 'hex')
   );
 
   if (!valid) {
