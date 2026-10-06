@@ -195,7 +195,7 @@ async function getConsultationContext(visitId) {
 async function saveConsultation(visitId, payload, actorUserId, prescriptionItems = []) {
   return withTransaction(async (conn) => {
     const [[visit]] = await conn.execute(
-      `SELECT v.*, p.health_id
+      `SELECT v.*, p.health_id, p.gender
        FROM opd_visits v
        JOIN patients p ON p.id = v.patient_id
        WHERE v.id = :id
@@ -303,7 +303,10 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     if (payload.pregnancyStatus !== undefined || payload.lmpDate !== undefined || payload.gravida !== undefined ||
         payload.para !== undefined || payload.abortions !== undefined || payload.gestationalAgeWeeks !== undefined ||
         payload.gestationalAgeDays !== undefined || payload.estimatedDueDate !== undefined || payload.obstetricNotes !== undefined) {
-      const pregnancyStatus = payload.pregnancyStatus || null;
+      const isFemale = String(visit.gender || '').toLowerCase() === 'female';
+      const pregnancyStatus = isFemale && ['PREGNANT', 'NOT_PREGNANT', 'UNKNOWN'].includes(payload.pregnancyStatus)
+        ? payload.pregnancyStatus
+        : (isFemale ? 'UNKNOWN' : null);
 
       if (pregnancyStatus === 'PREGNANT') {
         const { calculatePregnancy } = require('../utils/pregnancyCalculator');
@@ -335,7 +338,7 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
          WHERE id = :appointmentId`,
         {
           appointmentId: visit.appointment_id,
-          lmpDate: payload.lmpDate || null,
+          lmpDate: isFemale ? (payload.lmpDate || null) : null,
           gravida: pregnancyStatus === 'PREGNANT' && payload.gravida !== '' && payload.gravida != null
             ? Math.max(0, Number(payload.gravida))
             : null,
@@ -345,7 +348,7 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           gestationalWeeks: payload.gestationalAgeWeeks === '' || payload.gestationalAgeWeeks == null ? null : Number(payload.gestationalAgeWeeks),
           gestationalDays: payload.gestationalAgeDays === '' || payload.gestationalAgeDays == null ? null : Number(payload.gestationalAgeDays),
           estimatedDueDate: payload.estimatedDueDate || null,
-          obstetricNotes: payload.obstetricNotes || null
+          obstetricNotes: isFemale ? (payload.obstetricNotes || null) : null
         }
       );
     }
