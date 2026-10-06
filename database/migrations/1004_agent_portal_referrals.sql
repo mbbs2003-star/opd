@@ -28,7 +28,7 @@ ON DUPLICATE KEY UPDATE description = VALUES(description);
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r JOIN permissions p
-  ON p.code IN ('agent.portal','agent.patient.create','agent.patient.view',
+  ON p.code IN ('agent.portal','agent.patient.create','agent.patient.view','patient.view',
                 'agent.appointment.create','agent.lab.create','agent.referral.view')
 WHERE r.code = 'AGENT'
 ON DUPLICATE KEY UPDATE role_id = role_id;
