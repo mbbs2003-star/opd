@@ -127,8 +127,8 @@ async function createOrder(patientId,branchId,actorUserId,payload={}) {
     const year=new Date().getFullYear();
     const seq=await sequenceService.nextValue(conn,'lab-order:'+year+':'+lab.id);
     const orderCode='LAB'+year+sequenceService.pad(seq,6);
-    const source=['DOCTOR','PATIENT','RECEPTION','LAB'].includes(payload.source)?payload.source:'RECEPTION';
-    const status=source==='PATIENT'?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
+    const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
+    const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
     const total=tests.reduce((n,t)=>n+Number(t.price||0),0);
     const [r]=await conn.execute('INSERT INTO lab_orders (order_code,patient_id,visit_id,laboratory_id,source,ordered_by,referral_code,booking_date,priority,status,clinical_notes,total_amount,net_amount,payment_status) VALUES (:code,:patientId,:visitId,:labId,:source,:userId,:referralCode,:date,:priority,:status,:notes,:total,:total,"UNBILLED")',{code:orderCode,patientId,visitId:payload.visitId||null,labId:lab.id,source,userId:actorUserId,date:payload.bookingDate||new Date().toISOString().slice(0,10),priority:payload.priority||'ROUTINE',status,notes:payload.clinicalNotes||null,total,referralCode:payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null});
     for(const t of tests) await conn.execute('INSERT INTO lab_order_items (lab_order_id,test_id,test_code_snapshot,test_name_snapshot,test_type_snapshot,specimen_type_snapshot,price_snapshot,status,scheduled_date) VALUES (:orderId,:testId,:code,:name,:type,:specimen,:price,:status,:date)',{orderId:r.insertId,testId:t.id,code:t.code,name:t.name,type:t.test_type,specimen:t.specimen_type,price:t.price,status:source==='DOCTOR'?'ORDERED':'BOOKED',date:payload.bookingDate||new Date().toISOString().slice(0,10)});
