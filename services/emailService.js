@@ -10,6 +10,11 @@ function getTransporter() {
       host: emailConfig.host,
       port: emailConfig.port,
       secure: emailConfig.secure,
+      requireTLS: emailConfig.requireTLS,
+      connectionTimeout: emailConfig.connectionTimeout,
+      greetingTimeout: emailConfig.greetingTimeout,
+      socketTimeout: emailConfig.socketTimeout,
+      tls: { rejectUnauthorized: emailConfig.tlsRejectUnauthorized },
       auth: emailConfig.user ? { user: emailConfig.user, pass: emailConfig.password } : undefined
     });
   }
@@ -23,6 +28,18 @@ function getTransporter() {
  * it. Callers should still be able to `.catch()` this if they want to
  * know, but are not required to `await` it on the critical path.
  */
+async function verifySmtp() {
+  const client = getTransporter();
+  if (!client) return { ok: false, reason: 'smtp_disabled' };
+  try {
+    await client.verify();
+    return { ok: true };
+  } catch (err) {
+    console.error('[email] SMTP verification failed:', err.message);
+    return { ok: false, reason: 'verify_error', error: err.message };
+  }
+}
+
 async function sendMail({ to, subject, html, text }) {
   if (!to) {
     console.warn(`[email] Skipped "${subject}" — no recipient address on file.`);
@@ -171,6 +188,7 @@ async function notifyPasswordReset({ to, name, temporaryPassword }) {
 
 module.exports = {
   sendMail,
+  verifySmtp,
   notifyAppointmentBooked,
   notifyAppointmentRescheduled,
   notifyAppointmentCancelled,
