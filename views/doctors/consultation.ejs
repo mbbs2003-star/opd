@@ -182,7 +182,14 @@
         <hr class="my-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div><h5 class="mb-0">Rx <span class="text-muted fw-normal">Prescription / Medication</span></h5><div class="small text-muted">Use the same Save button below for consultation + prescription.</div></div>
-          <% if (hasPrescription) { %><span class="badge text-bg-primary">Current v<%= currentPrescriptions[0].version %></span><% } %>
+          <% if (hasPrescription) { %>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge text-bg-primary">Current v<%= currentPrescriptions[0].version %></span>
+              <% if (visit.status === 'COMPLETED') { %>
+                <a href="/prescriptions/<%= currentPrescriptions[0].id %>/edit" class="btn btn-sm btn-warning"><i class="bi bi-pencil-square"></i> Edit Prescription</a>
+              <% } %>
+            </div>
+          <% } %>
         </div>
         <datalist id="medicineList"><% medicines.forEach(function(m) { %><option value="<%= m.name %>" label="<%= [m.strength, m.composition, m.form].filter(Boolean).join(' · ') %>"></option><% }) %></datalist>
         <div class="table-responsive rx-editor-scroll">
@@ -285,7 +292,7 @@
   function esc(v){return String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function optionList(items){return items.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');}
   function rowHtml(item={}, index=0){
-    const selectedFreq = String(item.frequency || '').split(/[,;]+/).map(x=>x.trim()).filter(Boolean);
+    const selectedFreq = String(item.frequency || 'OD').split(/[,;]+/).map(x=>x.trim()).filter(Boolean);
     return '<tr>'+
       '<td><input type="hidden" name="medicineId" value="'+esc(item.medicine_id)+'"><input type="text" name="medicineName" class="form-control medicine-name-field medicine-color-'+(index%5)+'" list="medicineList" value="'+esc(item.medicine_name_freetext)+'" placeholder="Medicine name" '+(<%= isFinalized ? 'true' : 'false' %>?'readonly':'required')+'></td>'+
       '<td><input type="text" name="composition" class="form-control" value="'+esc(item.composition)+'" placeholder="Generic / composition" <%= isFinalized ? 'readonly' : '' %>></td>'+
@@ -302,7 +309,7 @@
   function syncCustom(select,cls){const row=select.closest('tr'),input=row.querySelector(cls);if(!input)return;const other=select.value==='__OTHER__';input.style.display=other?'block':'none';if(other)input.focus();else input.value='';}
   function setSelected(select,value){if(!select)return;const match=Array.from(select.options).find(o=>o.value===String(value||''));if(match)select.value=match.value;else if(value){select.value='__OTHER__';const custom=select.parentElement.querySelector(select.classList.contains('route-select')?'.custom-route':'.custom-form');if(custom){custom.style.display='block';custom.value=value;}}}
   function populateMedicine(row){const input=row.querySelector('input[name="medicineName"]');if(!input)return;const q=input.value.trim().toLowerCase();const m=medicineCatalog.find(x=>String(x.name||'').toLowerCase()===q || (String(x.name||'')+' '+String(x.strength||'')).trim().toLowerCase()===q);if(m){const comp=row.querySelector('input[name="composition"]');if(comp&&!comp.value)comp.value=m.composition||m.strength||'';const fs=row.querySelector('.medicine-form');if(fs&&!fs.value&&m.form)fs.value=m.form;}}
-  function addRow(item={}){body.insertAdjacentHTML('beforeend',rowHtml(item,body.rows.length));const row=body.lastElementChild;setSelected(row.querySelector('.medicine-form'),item.medicine_form);setSelected(row.querySelector('.route-select'),item.route);syncFrequency(row);}
+  function addRow(item={}){const normalizedItem={...item, frequency:item.frequency || 'OD', route:item.route || 'P/O'};body.insertAdjacentHTML('beforeend',rowHtml(normalizedItem,body.rows.length));const row=body.lastElementChild;setSelected(row.querySelector('.medicine-form'),normalizedItem.medicine_form);setSelected(row.querySelector('.route-select'),normalizedItem.route);syncFrequency(row);}
   if(existingItems.length) existingItems.forEach(addRow); else if(!<%= isFinalized ? 'true' : 'false' %>) addRow();
   document.getElementById('addRowBtn')?.addEventListener('click',()=>addRow());
   body.addEventListener('change',e=>{const row=e.target.closest('tr');if(!row)return;if(e.target.classList.contains('frequency-check'))syncFrequency(row);if(e.target.classList.contains('medicine-form'))syncCustom(e.target,'.custom-form');if(e.target.classList.contains('route-select'))syncCustom(e.target,'.custom-route');});
