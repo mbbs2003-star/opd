@@ -158,7 +158,46 @@ async function listAuditLogs({ entity = null, userId = null, page = 1, pageSize 
   return { rows, total, page, pageSize };
 }
 
+async function ensureAgentRole() {
+  // Keep the Agent role available even when an older production database has
+  // not yet replayed the Agent migration. The migration remains the canonical
+  // schema change; this makes Admin -> Users self-healing for RBAC metadata.
+  await pool.execute(
+    "INSERT INTO roles (code, name) VALUES ('AGENT', 'Agent') ON DUPLICATE KEY UPDATE name = VALUES(name)"
+  );
+
+  await pool.execute(
+    `INSERT INTO permissions (code, description) VALUES
+      ('agent.portal', 'Access Agent Portal'),
+      ('agent.patient.create', 'Register patients from Agent Portal'),
+      ('agent.patient.view', 'View Agent Portal patient attribution'),
+      ('agent.appointment.create', 'Book OPD appointments from Agent Portal'),
+      ('agent.lab.create', 'Book diagnostic tests from Agent Portal'),
+      ('agent.referral.view', 'View referral-code tracking')
+     ON DUPLICATE KEY UPDATE description = VALUES(description)`
+  );
+
+  await pool.execute(
+    `INSERT INTO role_permissions (role_id, permission_id)
+     SELECT r.id, p.id
+     FROM roles r
+     JOIN permissions p
+       ON p.code IN (
+         'agent.portal',
+         'agent.patient.create',
+         'agent.patient.view',
+         'patient.view',
+         'agent.appointment.create',
+         'agent.lab.create',
+         'agent.referral.view'
+       )
+     WHERE r.code = 'AGENT'
+     ON DUPLICATE KEY UPDATE role_id = role_id`
+  );
+}
+
 async function listRoles() {
+  await ensureAgentRole();
   const [rows] = await pool.execute('SELECT * FROM roles ORDER BY id');
   return rows;
 }

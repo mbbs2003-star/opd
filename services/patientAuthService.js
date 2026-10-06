@@ -65,7 +65,7 @@ async function consumeOtp(purpose, email, otp) {
   const [rows] = await pool.execute(
     `SELECT * FROM auth_otps
      WHERE purpose = :purpose AND email = :email AND consumed_at IS NULL AND expires_at > NOW()
-     ORDER BY created_at DESC LIMIT 1`,
+     ORDER BY id DESC LIMIT 1`,
     { purpose, email: normalized }
   );
   if (!rows.length) throw new AppError('The verification code is invalid or expired', 422);
@@ -73,10 +73,13 @@ async function consumeOtp(purpose, email, otp) {
   const record = rows[0];
   if (record.attempts >= 5) throw new AppError('Too many verification attempts. Request a new code.', 429);
 
-  const valid = crypto.timingSafeEqual(
-    Buffer.from(record.otp_hash, 'hex'),
-    Buffer.from(hashOtp(normalizedOtp), 'hex')
-  );
+  const storedHash = String(record.otp_hash || '').trim().toLowerCase();
+  const suppliedHash = hashOtp(normalizedOtp);
+  const valid = /^[a-f0-9]{64}$/.test(storedHash)
+    && crypto.timingSafeEqual(
+      Buffer.from(storedHash, 'hex'),
+      Buffer.from(suppliedHash, 'hex')
+    );
 
   if (!valid) {
     await pool.execute('UPDATE auth_otps SET attempts = attempts + 1 WHERE id = :id', { id: record.id });
