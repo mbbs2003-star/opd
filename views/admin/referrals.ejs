@@ -1,0 +1,69 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div><h4 class="mb-1">Referral Providers</h4><div class="small text-muted">Super Admin controls the official referral provider names, details and referral codes used by agents.</div></div>
+  <div class="d-flex gap-2"><a href="/admin/referrals/tracking" class="btn btn-outline-primary btn-sm"><i class="bi bi-bar-chart"></i> Tracking</a><button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newReferral"><i class="bi bi-plus-lg"></i> Add Referral Provider</button></div>
+</div>
+
+<div class="alert alert-info small"><strong>Important:</strong> Agents can only select active codes from this list. Free-text referral codes are no longer accepted for new Agent registrations/bookings.</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Provider</th><th>Referral Code</th><th>Contact</th><th>Usage</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      <% providers.forEach(function(p){ %>
+        <tr>
+          <td><strong><%= p.provider_name %></strong><div class="small text-muted"><%= p.provider_type || 'Referral Provider' %></div></td>
+          <td><code class="fs-6"><%= p.referral_code %></code></td>
+          <td><div><%= p.mobile || '—' %></div><div class="small text-muted"><%= p.email || '—' %></div></td>
+          <td><span class="badge text-bg-primary"><%= Number(p.patient_count) %> patients</span> <span class="badge text-bg-light border"><%= Number(p.opd_count) %> OPD</span> <span class="badge text-bg-light border"><%= Number(p.test_count) %> tests</span></td>
+          <td><span class="badge text-bg-<%= p.is_active ? 'success' : 'secondary' %>"><%= p.is_active ? 'Active' : 'Inactive' %></span></td>
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editReferral<%= p.id %>">Edit</button>
+            <form method="POST" action="/admin/referrals/<%= p.id %>/toggle" class="d-inline">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="isActive" value="<%= p.is_active ? '0' : '1' %>">
+              <button class="btn btn-sm btn-outline-<%= p.is_active ? 'danger' : 'success' %>"><%= p.is_active ? 'Deactivate' : 'Activate' %></button>
+            </form>
+          </td>
+        </tr>
+        <div class="modal fade" id="editReferral<%= p.id %>" tabindex="-1">
+          <div class="modal-dialog modal-lg"><form method="POST" action="/admin/referrals/<%= p.id %>" class="modal-content">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="modal-header"><h5 class="modal-title">Edit Referral Provider</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body"><div class="row g-3">
+              <div class="col-md-6"><label class="form-label">Provider Name *</label><input name="providerName" class="form-control" value="<%= p.provider_name %>" required></div>
+              <div class="col-md-6"><label class="form-label">Referral Code *</label><input name="referralCode" class="form-control text-uppercase" value="<%= p.referral_code %>" pattern="[A-Za-z0-9_-]{3,80}" maxlength="80" required></div>
+              <div class="col-md-4"><label class="form-label">Provider Type</label><input name="providerType" class="form-control" value="<%= p.provider_type || '' %>" placeholder="Doctor / Clinic / Agency / Other"></div>
+              <div class="col-md-4"><label class="form-label">Mobile</label><input name="mobile" class="form-control" value="<%= p.mobile || '' %>"></div>
+              <div class="col-md-4"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="<%= p.email || '' %>"></div>
+              <div class="col-12"><label class="form-label">Address</label><input name="address" class="form-control" value="<%= p.address || '' %>"></div>
+              <div class="col-12"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"><%= p.notes || '' %></textarea></div>
+              <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="isActive" value="1" <%= p.is_active ? 'checked' : '' %>><label class="form-check-label">Active — available to Agents</label></div></div>
+            </div></div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">Save Changes</button></div>
+          </form></div>
+        </div>
+      <% }) %>
+      <% if(!providers.length){ %><tr><td colspan="6" class="text-center text-muted py-5">No referral providers configured.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="newReferral" tabindex="-1">
+  <div class="modal-dialog modal-lg"><form method="POST" action="/admin/referrals" class="modal-content">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="modal-header"><h5 class="modal-title">Add Referral Provider</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Provider Name *</label><input name="providerName" class="form-control" placeholder="e.g. Dr. ABC / XYZ Clinic" required></div>
+      <div class="col-md-6"><label class="form-label">Referral Code *</label><input name="referralCode" class="form-control text-uppercase" pattern="[A-Za-z0-9_-]{3,80}" maxlength="80" placeholder="e.g. REF-DR-001" required><div class="form-text">Unique code. Agents will select this from a dropdown.</div></div>
+      <div class="col-md-4"><label class="form-label">Provider Type</label><input name="providerType" class="form-control" placeholder="Doctor / Clinic / Agency / Other"></div>
+      <div class="col-md-4"><label class="form-label">Mobile</label><input name="mobile" class="form-control"></div>
+      <div class="col-md-4"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
+      <div class="col-12"><label class="form-label">Address</label><input name="address" class="form-control"></div>
+      <div class="col-12"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
+      <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="isActive" value="1" checked><label class="form-check-label">Active — available to Agents</label></div></div>
+    </div></div>
+    <div class="modal-footer"><button type="submit" class="btn btn-primary">Create Referral Provider</button></div>
+  </form></div>
+</div>

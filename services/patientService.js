@@ -81,10 +81,10 @@ async function registerPatient(payload, actorUserId) {
         const [result] = await conn.execute(
           `INSERT INTO patients
             (health_id, registration_number, branch_id, name, father_name, husband_name, gender, dob, age_years,
-             mobile, alt_mobile, email, aadhaar_encrypted, aadhaar_iv, aadhaar_hash, aadhaar_last4, created_by, referral_code)
+             mobile, alt_mobile, email, aadhaar_encrypted, aadhaar_iv, aadhaar_hash, aadhaar_last4, created_by, referral_code, referral_provider_id)
            VALUES
             (:healthId, :registrationNumber, :branchId, :name, :fatherName, :husbandName, :gender, :dob, :ageYears,
-             :mobile, :altMobile, :email, :aadhaarEncrypted, :aadhaarIv, :aadhaarHash, :aadhaarLast4, :createdBy, :referralCode)`,
+             :mobile, :altMobile, :email, :aadhaarEncrypted, :aadhaarIv, :aadhaarHash, :aadhaarLast4, :createdBy, :referralCode, :referralProviderId)`,
           {
             healthId,
             registrationNumber,
@@ -103,7 +103,8 @@ async function registerPatient(payload, actorUserId) {
             aadhaarHash,
             aadhaarLast4,
             createdBy: actorUserId,
-            referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null
+            referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null,
+            referralProviderId: payload.referralProviderId || null
           }
         );
         const patientId = result.insertId;
@@ -210,8 +211,8 @@ async function searchPatients({ q, limit = 10 }) {
 async function listPatients({ page = 1, pageSize = 20 }) {
   const offset = (page - 1) * pageSize;
   const [rows] = await pool.query(
-    `SELECT p.id, p.health_id, p.registration_number, p.name, p.gender, p.age_years, p.mobile, p.created_at
-     FROM patients p WHERE p.deleted_at IS NULL
+    `SELECT p.id, p.health_id, p.registration_number, p.name, p.gender, p.age_years, p.mobile, p.referral_code, p.referral_provider_id, rp.provider_name AS referral_provider_name, p.created_at
+     FROM patients p LEFT JOIN referral_providers rp ON rp.id=p.referral_provider_id WHERE p.deleted_at IS NULL
      ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset`,
     { limit: pageSize, offset }
   );
@@ -226,11 +227,13 @@ async function getPatientProfile(healthIdOrId) {
             m.blood_group, m.height_cm, m.weight_kg, m.allergies, m.existing_conditions,
             m.emergency_contact, m.emergency_contact_relation,
             b.name AS branch_name,
+            rp.provider_name AS referral_provider_name, rp.referral_code AS referral_provider_current_code,
             EXISTS(SELECT 1 FROM users pu WHERE pu.patient_id = p.id AND pu.deleted_at IS NULL) AS portal_account_exists
      FROM patients p
      LEFT JOIN patient_addresses pa ON pa.patient_id = p.id
      LEFT JOIN patient_medical_profiles m ON m.patient_id = p.id
      LEFT JOIN branches b ON b.id = p.branch_id
+     LEFT JOIN referral_providers rp ON rp.id = p.referral_provider_id
      WHERE p.deleted_at IS NULL AND (p.health_id = :key ${isNumericId ? 'OR p.id = :key' : ''})
      LIMIT 1`,
     { key: healthIdOrId }
@@ -247,12 +250,14 @@ async function getPatientProfile(healthIdOrId) {
             d.doctor_code, du.name AS doctor_name, dept.name AS department_name,
             c.diagnosis, c.follow_up_date,
             i.id AS invoice_id, i.invoice_number, i.status AS invoice_status, i.net_amount,
+            a.referral_code, rp.provider_name AS referral_provider_name,
             (SELECT pr.id FROM prescriptions pr WHERE pr.visit_id = v.id AND pr.is_current = 1 ORDER BY pr.version DESC LIMIT 1) AS prescription_id
      FROM opd_visits v
      JOIN doctors d ON d.id = v.doctor_id
      JOIN users du ON du.id = d.user_id
      JOIN appointments a ON a.id = v.appointment_id
      JOIN departments dept ON dept.id = a.department_id
+     LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
      LEFT JOIN opd_consultations c ON c.visit_id = v.id
      LEFT JOIN invoices i ON i.visit_id = v.id
      WHERE v.patient_id = :id

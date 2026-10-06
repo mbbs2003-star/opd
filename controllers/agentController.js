@@ -26,7 +26,8 @@ async function patients(req,res,next){
 
 async function newPatient(req,res,next){
   try {
-    res.render('agent/patient-new',{title:'Register Patient — Agent Portal',today:new Date().toISOString().slice(0,10),referralCode:agentService.referralCode(req.query.referralCode,req.user.id)});
+    const referralProviders = await agentService.getReferralProviders();
+    res.render('agent/patient-new',{title:'Register Patient — Agent Portal',today:new Date().toISOString().slice(0,10),referralProviders,selectedReferralCode:agentService.referralCode(req.query.referralCode,req.user.id)});
   } catch(err){next(err);}
 }
 
@@ -54,8 +55,9 @@ async function opdForm(req,res,next){
   try {
     const bid=branchId(req);
     const context=await agentService.getBookingContext(bid);
+    const referralProviders=await agentService.getReferralProviders();
     const patient=req.query.healthId?await agentService.getPatient(req.query.healthId,bid):null;
-    res.render('agent/opd-book',{title:'Book OPD — Agent Portal',...context,patient,today:new Date().toISOString().slice(0,10),referralCode:agentService.referralCode(req.query.referralCode,req.user.id)});
+    res.render('agent/opd-book',{title:'Book OPD — Agent Portal',...context,patient,referralProviders,today:new Date().toISOString().slice(0,10),selectedReferralCode:agentService.referralCode(req.query.referralCode,req.user.id)});
   }catch(err){next(err);}
 }
 
@@ -81,7 +83,7 @@ async function bookOpd(req,res,next){
       abortions:req.body.abortions,
       pregnancyStatus:req.body.pregnancyStatus,
       obstetricNotes:req.body.obstetricNotes,
-      referralCode:agentService.requireReferralCode(req.body.referralCode,req.user.id)
+      referralCode:(await agentService.requireReferralCode(req.body.referralCode)).referral_code
     },req.user.id);
     req.flash('success',`OPD booked for ${patient.name}. Token ${String(result.token).padStart(3,'0')} — ${result.appointmentCode}`);
     res.redirect('/agent/patients');
@@ -95,8 +97,9 @@ async function testForm(req,res,next){
   try {
     const bid=branchId(req);
     const patient=req.query.healthId?await agentService.getPatient(req.query.healthId,bid):null;
+    const referralProviders=await agentService.getReferralProviders();
     const tests=await agentService.getTestContext(bid);
-    res.render('agent/test-book',{title:'Book Diagnostic Tests — Agent Portal',patient,tests,today:new Date().toISOString().slice(0,10),referralCode:agentService.referralCode(req.query.referralCode,req.user.id)});
+    res.render('agent/test-book',{title:'Book Diagnostic Tests — Agent Portal',patient,tests,referralProviders,today:new Date().toISOString().slice(0,10),selectedReferralCode:agentService.referralCode(req.query.referralCode,req.user.id)});
   }catch(err){next(err);}
 }
 

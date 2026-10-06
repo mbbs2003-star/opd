@@ -88,25 +88,10 @@
     <form method="POST" action="/doctor/consultation/<%= visit.id %>" class="card mb-3" id="consultationRxForm">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="visitId" value="<%= visit.id %>">
+      <input type="hidden" name="_editMode" value="<%= editMode ? '1' : '0' %>">
 
       <% if (String(visit.gender || '').toLowerCase() === 'female') { %>
-      <div class="pregnancy-doctor-card mb-3 border-0 rounded-0">
-        <div class="pregnancy-doctor-card__head">
-          <div><span class="small text-uppercase fw-bold">Female / Obstetric Assessment</span><h5 class="mb-0 mt-1"><i class="bi bi-gender-female me-1"></i> Pregnancy information</h5></div>
-          <span class="badge text-bg-<%= visit.pregnancy_status === 'PREGNANT' ? 'success' : 'secondary' %>"><%= visit.pregnancy_status || 'NOT RECORDED' %></span>
-        </div>
-        <div class="row g-2 mt-1">
-          <div class="col-6 col-md-4"><label class="form-label small">Pregnancy status</label><select name="pregnancyStatus" class="form-select form-select-sm" <%= !canEdit ? 'disabled' : '' %>><option value="">Not recorded</option><option value="NOT_PREGNANT" <%= visit.pregnancy_status === 'NOT_PREGNANT' ? 'selected' : '' %>>Not pregnant</option><option value="PREGNANT" <%= visit.pregnancy_status === 'PREGNANT' ? 'selected' : '' %>>Pregnant</option></select></div>
-          <div class="col-6 col-md-4"><label class="form-label small">LMP</label><input type="date" name="lmpDate" class="form-control form-control-sm" value="<%= visit.lmp_date ? String(visit.lmp_date).slice(0,10) : '' %>" <%= !canEdit ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4" id="doctorGravidaField"><label class="form-label small">Gravida (G)</label><input type="number" min="0" name="gravida" class="form-control form-control-sm" value="<%= visit.gravida ?? '' %>" <%= !canEdit ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Para (P)</label><input type="number" min="0" name="para" class="form-control form-control-sm" value="<%= visit.para ?? '' %>" <%= !canEdit ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Abortions (A)</label><input type="number" min="0" name="abortions" class="form-control form-control-sm" value="<%= visit.abortions ?? '' %>" <%= !canEdit ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Gestational age (weeks)</label><input type="number" min="0" name="gestationalAgeWeeks" id="doctorGestationalWeeks" class="form-control form-control-sm" value="<%= visit.gestational_age_weeks ?? (pregnancyCalculation?.gestationalAgeWeeks ?? '') %>" readonly></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Gestational age (days)</label><input type="number" min="0" max="6" name="gestationalAgeDays" id="doctorGestationalDays" class="form-control form-control-sm" value="<%= visit.gestational_age_days ?? (pregnancyCalculation?.gestationalAgeDays ?? '') %>" readonly></div>
-          <div class="col-6 col-md-4"><label class="form-label small">EDD</label><input type="date" name="estimatedDueDate" id="doctorEdd" class="form-control form-control-sm" value="<%= visit.estimated_due_date ? String(visit.estimated_due_date).slice(0,10) : '' %>" readonly></div>
-          <div class="col-12"><label class="form-label small">Obstetric notes</label><textarea name="obstetricNotes" class="form-control form-control-sm" rows="2" <%= !canEdit ? 'readonly' : '' %>><%= visit.obstetric_notes || '' %></textarea></div>
-        </div>
-      </div>
+      <%- include('../partials/pregnancy-assessment', { pregnancy: visit, pregnancyCalculation, canEdit }) %>
       <% } %>
 
       <div class="card-header">Clinical Consultation</div>

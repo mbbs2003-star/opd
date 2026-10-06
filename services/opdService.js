@@ -3,17 +3,23 @@ const sequenceService = require('./sequenceService');
 const scheduleService = require('./scheduleService');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const referralService = require('./referralService');
+const { calculatePregnancy: calculatePregnancyFromLmp } = require('../utils/pregnancyCalculator');
 
 function calculatePregnancy(lmpDate, pregnancyStatus, asOfDate) {
   if (pregnancyStatus !== 'PREGNANT' || !lmpDate) {
     return { status: pregnancyStatus || 'UNKNOWN', weeks: null, days: null, edd: null };
   }
-  const lmp = new Date(lmpDate + 'T00:00:00Z');
-  const asOf = new Date((asOfDate || new Date().toISOString().slice(0,10)) + 'T00:00:00Z');
-  const diffDays = Math.max(0, Math.floor((asOf - lmp) / 86400000));
-  const eddDate = new Date(lmp.getTime() + 280 * 86400000);
-  const edd = eddDate.toISOString().slice(0,10);
-  return { status: 'PREGNANT', weeks: Math.floor(diffDays / 7), days: diffDays % 7, edd };
+  const calculation = calculatePregnancyFromLmp(lmpDate, asOfDate);
+  if (!calculation) {
+    throw new AppError('Invalid pregnancy input: LMP must be a valid date and cannot be after the appointment date.', 422);
+  }
+  return {
+    status: 'PREGNANT',
+    weeks: calculation.gestationalAgeWeeks,
+    days: calculation.gestationalAgeDays,
+    edd: calculation.estimatedDueDate
+  };
 }
 
 /** Appointment code: APT-YYMMDD-NNNN (global daily sequence) */
@@ -48,14 +54,34 @@ async function generateToken(conn, dateStr) {
 async function bookAppointment(payload, actorUserId) {
   return withTransaction(async (conn) => {
     const { patientId, doctorId, branchId, departmentId, appointmentDate, slotTime, reason } = payload;
-    const obstetric = calculatePregnancy(payload.lmpDate, payload.pregnancyStatus, appointmentDate);
+    let obstetricStatus = ['PREGNANT', 'NOT_PREGNANT', 'UNKNOWN'].includes(payload.pregnancyStatus)
+      ? payload.pregnancyStatus
+      : 'UNKNOWN';
 
     const [[patient]] = await conn.execute(
-      'SELECT id, health_id, name, status FROM patients WHERE id = :id AND deleted_at IS NULL',
+      'SELECT id, health_id, name, gender, status, referral_code, referral_provider_id FROM patients WHERE id = :id AND deleted_at IS NULL',
       { id: patientId }
     );
     if (!patient) throw new AppError('Patient not found', 404);
     if (patient.status === 'SUSPENDED') throw new AppError('This patient is suspended. Restore the patient before booking an appointment.', 409);
+    const isFemale = String(patient.gender || '').toLowerCase() === 'female';
+    if (!isFemale) obstetricStatus = 'UNKNOWN';
+
+    let referralCode = patient.referral_code || null;
+    let referralProviderId = patient.referral_provider_id || null;
+    if (payload.referralCode) {
+      const normalized = referralService.normalizeCode(payload.referralCode);
+      const [[provider]] = await conn.execute(
+        'SELECT id, referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',
+        { code: normalized }
+      );
+      if (!provider) throw new AppError('The selected referral code is invalid or inactive.', 422);
+      referralCode = provider.referral_code;
+      referralProviderId = provider.id;
+    }
+    const obstetric = isFemale
+      ? calculatePregnancy(payload.lmpDate, obstetricStatus, appointmentDate)
+      : { status: 'UNKNOWN', weeks: null, days: null, edd: null };
 
     const [[doctor]] = await conn.execute(
       `SELECT id, consultation_fee, branch_id, department_id
@@ -84,13 +110,13 @@ async function bookAppointment(payload, actorUserId) {
          appointment_date, slot_time, token_number, reason,
          lmp_date, gravida, para, abortions, pregnancy_status,
          gestational_age_weeks, gestational_age_days, estimated_due_date, obstetric_notes,
-         status, created_by, referral_code)
+         status, created_by, referral_code, referral_provider_id)
        VALUES
         (:code, :patientId, :doctorId, :branchId, :departmentId,
          :date, :slotTime, :token, :reason,
          :lmpDate, :gravida, :para, :abortions, :pregnancyStatus,
          :gaWeeks, :gaDays, :edd, :obstetricNotes,
-         'BOOKED', :createdBy, :referralCode)`,
+         'BOOKED', :createdBy, :referralCode, :referralProviderId)`,
       {
         code: appointmentCode,
         patientId,
@@ -101,17 +127,18 @@ async function bookAppointment(payload, actorUserId) {
         slotTime,
         token,
         reason: reason || null,
-        lmpDate: payload.lmpDate || null,
-        gravida: payload.gravida === '' ? null : (payload.gravida ?? null),
-        para: payload.para === '' ? null : (payload.para ?? null),
-        abortions: payload.abortions === '' ? null : (payload.abortions ?? null),
+        lmpDate: isFemale ? (payload.lmpDate || null) : null,
+        gravida: isFemale && obstetricStatus === 'PREGNANT' && payload.gravida !== '' ? Math.max(0, parseInt(payload.gravida, 10) || 0) : null,
+        para: isFemale && payload.para !== '' && payload.para != null ? Math.max(0, parseInt(payload.para, 10) || 0) : null,
+        abortions: isFemale && payload.abortions !== '' && payload.abortions != null ? Math.max(0, parseInt(payload.abortions, 10) || 0) : null,
         pregnancyStatus: obstetric.status,
         gaWeeks: obstetric.weeks,
         gaDays: obstetric.days,
         edd: obstetric.edd,
         obstetricNotes: payload.obstetricNotes || null,
         createdBy: actorUserId,
-        referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null
+        referralCode,
+        referralProviderId
       }
     );
     const appointmentId = apptResult.insertId;
@@ -280,6 +307,7 @@ async function listAppointments({ date = null, doctorId = null, status = null, p
             u.name AS doctor_name, dept.name AS department_name,
             creator.name AS booked_by_name,
             creator.id AS booked_by_id,
+            a.referral_code, rp.provider_name AS referral_provider_name, rp.referral_code AS referral_provider_current_code,
             v.id AS visit_id, v.status AS visit_status,
             i.id AS invoice_id, i.invoice_number, i.status AS payment_status, i.net_amount
      FROM appointments a
@@ -288,6 +316,7 @@ async function listAppointments({ date = null, doctorId = null, status = null, p
      JOIN users u ON u.id = d.user_id
      JOIN departments dept ON dept.id = a.department_id
      LEFT JOIN users creator ON creator.id = a.created_by
+     LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
      LEFT JOIN opd_visits v ON v.appointment_id = a.id
      LEFT JOIN invoices i ON i.visit_id = v.id
      WHERE (:date IS NULL OR a.appointment_date = :date)
@@ -313,7 +342,7 @@ async function getAppointment(appointmentId) {
   const [[appt]] = await pool.execute(
     `SELECT a.*, p.health_id, p.name AS patient_name, p.age_years, p.gender, p.mobile, p.email AS patient_email,
             u.name AS doctor_name, d.consultation_fee, dept.name AS department_name,
-            b.name AS branch_name, v.id AS visit_id, v.visit_code, v.status AS visit_status,
+            b.name AS branch_name, a.referral_code, rp.provider_name AS referral_provider_name, rp.referral_code AS referral_provider_current_code, v.id AS visit_id, v.visit_code, v.status AS visit_status,
             i.id AS invoice_id, i.status AS invoice_status, i.net_amount
      FROM appointments a
      JOIN patients p ON p.id = a.patient_id
@@ -321,6 +350,7 @@ async function getAppointment(appointmentId) {
      JOIN users u ON u.id = d.user_id
      JOIN departments dept ON dept.id = a.department_id
      JOIN branches b ON b.id = a.branch_id
+     LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
      LEFT JOIN opd_visits v ON v.appointment_id = a.id
      LEFT JOIN invoices i ON i.visit_id = v.id
      WHERE a.id = :id`,

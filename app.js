@@ -162,6 +162,7 @@ app.use('/doctor', require('./routes/doctorPortalRoutes'));
 app.use('/prescriptions', require('./routes/prescriptionRoutes'));
 app.use('/billing', require('./routes/billingRoutes'));
 app.use('/admin', require('./routes/adminRoutes'));
+app.use('/admin/referrals', require('./routes/referralRoutes'));
 app.use('/reports', require('./routes/reportRoutes'));
 app.use('/scan', require('./routes/scanRoutes'));
 app.use('/lab', require('./routes/labRoutes'));

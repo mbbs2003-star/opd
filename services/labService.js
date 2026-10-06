@@ -48,6 +48,8 @@ async function getTest(testId) {
 
 async function createTest(branchId,payload,actorUserId) {
   return withTransaction(async conn=>{
+    const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
+    const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
     const lab=await getLaboratoryForBranch(branchId,conn);
     if(!lab) throw new AppError('No active laboratory/diagnostic centre is configured',409);
     if(!payload.code || !payload.name) throw new AppError('Test code and test name are required',422);
@@ -114,8 +116,21 @@ async function saveTestParameters(testId,payload,actorUserId) {
 
 async function createOrder(patientId,branchId,actorUserId,payload={}) {
   return withTransaction(async conn=>{
-    const [[patient]]=await conn.execute('SELECT id,name,health_id,branch_id FROM patients WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:patientId});
+    const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
+    const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
+    const [[patient]]=await conn.execute('SELECT id,name,health_id,branch_id,referral_code,referral_provider_id FROM patients WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:patientId});
     if(!patient) throw new AppError('Patient not found',404);
+
+    let referralCode=patient.referral_code||null;
+    let referralProviderId=patient.referral_provider_id||null;
+    if(payload.referralCode){
+      const normalized=referralService.normalizeCode(payload.referralCode);
+      const [[provider]]=await conn.execute('SELECT id,referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',{code:normalized});
+      if(!provider) throw new AppError('The selected referral code is invalid or inactive.',422);
+      referralCode=provider.referral_code;
+      referralProviderId=provider.id;
+    }
+    if(source==='AGENT' && !referralProviderId) throw new AppError('A valid active referral code is required for Agent diagnostic bookings.',422);
     const lab=await getLaboratoryForBranch(branchId||patient.branch_id,conn);
     if(!lab) throw new AppError('No active laboratory/diagnostic centre is configured',409);
     const ids=[...new Set((payload.testIds||[]).map(Number).filter(Number.isInteger))];
@@ -127,10 +142,8 @@ async function createOrder(patientId,branchId,actorUserId,payload={}) {
     const year=new Date().getFullYear();
     const seq=await sequenceService.nextValue(conn,'lab-order:'+year+':'+lab.id);
     const orderCode='LAB'+year+sequenceService.pad(seq,6);
-    const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
-    const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
     const total=tests.reduce((n,t)=>n+Number(t.price||0),0);
-    const [r]=await conn.execute('INSERT INTO lab_orders (order_code,patient_id,visit_id,laboratory_id,source,ordered_by,referral_code,booking_date,priority,status,clinical_notes,total_amount,net_amount,payment_status) VALUES (:code,:patientId,:visitId,:labId,:source,:userId,:referralCode,:date,:priority,:status,:notes,:total,:total,"UNBILLED")',{code:orderCode,patientId,visitId:payload.visitId||null,labId:lab.id,source,userId:actorUserId,date:payload.bookingDate||new Date().toISOString().slice(0,10),priority:payload.priority||'ROUTINE',status,notes:payload.clinicalNotes||null,total,referralCode:payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null});
+    const [r]=await conn.execute('INSERT INTO lab_orders (order_code,patient_id,visit_id,laboratory_id,source,ordered_by,referral_code,referral_provider_id,booking_date,priority,status,clinical_notes,total_amount,net_amount,payment_status) VALUES (:code,:patientId,:visitId,:labId,:source,:userId,:referralCode,:referralProviderId,:date,:priority,:status,:notes,:total,:total,"UNBILLED")',{code:orderCode,patientId,visitId:payload.visitId||null,labId:lab.id,source,userId:actorUserId,date:payload.bookingDate||new Date().toISOString().slice(0,10),priority:payload.priority||'ROUTINE',status,notes:payload.clinicalNotes||null,total,referralCode,referralProviderId});
     for(const t of tests) await conn.execute('INSERT INTO lab_order_items (lab_order_id,test_id,test_code_snapshot,test_name_snapshot,test_type_snapshot,specimen_type_snapshot,price_snapshot,status,scheduled_date) VALUES (:orderId,:testId,:code,:name,:type,:specimen,:price,:status,:date)',{orderId:r.insertId,testId:t.id,code:t.code,name:t.name,type:t.test_type,specimen:t.specimen_type,price:t.price,status:source==='DOCTOR'?'ORDERED':'BOOKED',date:payload.bookingDate||new Date().toISOString().slice(0,10)});
     await conn.execute('INSERT INTO lab_order_status_history (lab_order_id,old_status,new_status,changed_by,note) VALUES (:orderId,NULL,:status,:userId,:note)',{orderId:r.insertId,status,userId:actorUserId,note:'Created from '+source.toLowerCase()+' workflow'});
     await auditService.log({userId:actorUserId,action:'LAB_ORDER_CREATED',entity:'lab_order',entityId:r.insertId,newValue:{orderCode,patientId,source,testIds:ids}},conn);
@@ -178,12 +191,12 @@ async function listOrders(branchId,filters={}) {
   const params={branchId}; const where=['l.branch_id=:branchId'];
   if(filters.status){params.status=filters.status;where.push('o.status=:status');}
   if(filters.q){params.q='%'+String(filters.q).trim()+'%';where.push('(o.order_code LIKE :q OR p.health_id LIKE :q OR p.name LIKE :q)');}
-  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.referral_code,p.health_id,p.name patient_name,l.name laboratory_name,du.name ordered_by_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN patients p ON p.id=o.patient_id JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN users du ON du.id=o.ordered_by LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE '+where.join(' AND ')+' GROUP BY o.id, du.name ORDER BY o.created_at DESC LIMIT 250',params);
+  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.referral_code,rp.provider_name AS referral_provider_name,p.health_id,p.name patient_name,l.name laboratory_name,du.name ordered_by_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN patients p ON p.id=o.patient_id JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN users du ON du.id=o.ordered_by LEFT JOIN referral_providers rp ON rp.id=o.referral_provider_id LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE '+where.join(' AND ')+' GROUP BY o.id, du.name ORDER BY o.created_at DESC LIMIT 250',params);
   return rows;
 }
 
 async function getOrder(orderId) {
-  const [[order]]=await pool.execute('SELECT o.*,p.health_id,p.name patient_name,p.gender,p.age_years,p.dob,p.mobile,l.name laboratory_name,l.address laboratory_address,l.phone laboratory_phone,l.email laboratory_email,l.report_header,l.report_footer,l.signatory_name,l.signatory_qualification,l.signatory_registration_no,v.visit_code,du.name ordered_by_name FROM lab_orders o JOIN patients p ON p.id=o.patient_id JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN opd_visits v ON v.id=o.visit_id LEFT JOIN users du ON du.id=o.ordered_by WHERE o.id=:id',{id:orderId});
+  const [[order]]=await pool.execute('SELECT o.*,p.health_id,p.name patient_name,p.gender,p.age_years,p.dob,p.mobile,o.referral_code,rp.provider_name AS referral_provider_name,rp.referral_code AS referral_provider_current_code,l.name laboratory_name,l.address laboratory_address,l.phone laboratory_phone,l.email laboratory_email,l.report_header,l.report_footer,l.signatory_name,l.signatory_qualification,l.signatory_registration_no,v.visit_code,du.name ordered_by_name FROM lab_orders o JOIN patients p ON p.id=o.patient_id JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN opd_visits v ON v.id=o.visit_id LEFT JOIN users du ON du.id=o.ordered_by LEFT JOIN referral_providers rp ON rp.id=o.referral_provider_id WHERE o.id=:id',{id:orderId});
   if(!order)return null;
   const [items]=await pool.execute('SELECT oi.*,t.methodology,t.fasting_required,t.patient_preparation,t.tat_minutes,t.is_accredited,s.name section_name,lr.id result_id,lr.version result_version,lr.status result_status,ls.id sample_id,ls.sample_code,ls.barcode_value,ls.status sample_status FROM lab_order_items oi JOIN lab_tests t ON t.id=oi.test_id LEFT JOIN lab_sections s ON s.id=t.section_id LEFT JOIN lab_results lr ON lr.lab_order_item_id=oi.id AND lr.is_current=1 LEFT JOIN lab_samples ls ON ls.lab_order_item_id=oi.id WHERE oi.lab_order_id=:orderId ORDER BY s.name,oi.test_name_snapshot',{orderId});
   const [history]=await pool.execute('SELECT h.*,u.name changed_by_name FROM lab_order_status_history h JOIN users u ON u.id=h.changed_by WHERE h.lab_order_id=:orderId ORDER BY h.created_at DESC',{orderId});
@@ -302,7 +315,7 @@ async function cancelOrder(orderId,actorUserId,reason,patientInitiated=false) {
 }
 
 async function patientOrders(patientId) {
-  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.cancellation_reason,l.name laboratory_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE o.patient_id=:patientId GROUP BY o.id ORDER BY o.created_at DESC',{patientId});
+  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.cancellation_reason,o.referral_code,rp.provider_name AS referral_provider_name,l.name laboratory_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN referral_providers rp ON rp.id=o.referral_provider_id LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE o.patient_id=:patientId GROUP BY o.id ORDER BY o.created_at DESC',{patientId});
   return rows;
 }
 

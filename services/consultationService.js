@@ -195,7 +195,7 @@ async function getConsultationContext(visitId) {
 async function saveConsultation(visitId, payload, actorUserId, prescriptionItems = []) {
   return withTransaction(async (conn) => {
     const [[visit]] = await conn.execute(
-      `SELECT v.*, p.health_id
+      `SELECT v.*, p.health_id, p.gender
        FROM opd_visits v
        JOIN patients p ON p.id = v.patient_id
        WHERE v.id = :id
@@ -214,9 +214,10 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     }
     const complementaryRequested = String(payload.complementaryRequested || '') === '1' ||
       payload.complementaryRequested === true || payload.complementaryRequested === 'on';
+    const allowFinalizedEdit = payload.allowFinalizedEdit === true || payload.allowFinalizedEdit === '1';
     if (existing) {
-      if (visit.status === 'COMPLETED') {
-        throw new AppError('This consultation is finalized and cannot be edited', 409);
+      if (visit.status === 'COMPLETED' && !allowFinalizedEdit) {
+        throw new AppError('This consultation is finalized. Open Edit Consultation to make a correction.', 409);
       }
       await conn.execute(
         `UPDATE opd_consultations SET complaints = :complaints, symptoms = :symptoms,
@@ -302,7 +303,10 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     if (payload.pregnancyStatus !== undefined || payload.lmpDate !== undefined || payload.gravida !== undefined ||
         payload.para !== undefined || payload.abortions !== undefined || payload.gestationalAgeWeeks !== undefined ||
         payload.gestationalAgeDays !== undefined || payload.estimatedDueDate !== undefined || payload.obstetricNotes !== undefined) {
-      const pregnancyStatus = payload.pregnancyStatus || null;
+      const isFemale = String(visit.gender || '').toLowerCase() === 'female';
+      const pregnancyStatus = isFemale && ['PREGNANT', 'NOT_PREGNANT', 'UNKNOWN'].includes(payload.pregnancyStatus)
+        ? payload.pregnancyStatus
+        : (isFemale ? 'UNKNOWN' : null);
 
       if (pregnancyStatus === 'PREGNANT') {
         const { calculatePregnancy } = require('../utils/pregnancyCalculator');
@@ -334,17 +338,17 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
          WHERE id = :appointmentId`,
         {
           appointmentId: visit.appointment_id,
-          lmpDate: payload.lmpDate || null,
+          lmpDate: isFemale ? (payload.lmpDate || null) : null,
           gravida: pregnancyStatus === 'PREGNANT' && payload.gravida !== '' && payload.gravida != null
             ? Math.max(0, Number(payload.gravida))
             : null,
-          para: payload.para === '' || payload.para == null ? null : Math.max(0, Number(payload.para)),
-          abortions: payload.abortions === '' || payload.abortions == null ? null : Math.max(0, Number(payload.abortions)),
+          para: isFemale && payload.para !== '' && payload.para != null ? Math.max(0, Number(payload.para)) : null,
+          abortions: isFemale && payload.abortions !== '' && payload.abortions != null ? Math.max(0, Number(payload.abortions)) : null,
           pregnancyStatus,
           gestationalWeeks: payload.gestationalAgeWeeks === '' || payload.gestationalAgeWeeks == null ? null : Number(payload.gestationalAgeWeeks),
           gestationalDays: payload.gestationalAgeDays === '' || payload.gestationalAgeDays == null ? null : Number(payload.gestationalAgeDays),
           estimatedDueDate: payload.estimatedDueDate || null,
-          obstetricNotes: payload.obstetricNotes || null
+          obstetricNotes: isFemale ? (payload.obstetricNotes || null) : null
         }
       );
     }
@@ -413,7 +417,7 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     await auditService.log(
       {
         userId: actorUserId,
-        action: existing ? 'CONSULTATION_UPDATED' : 'CONSULTATION_CREATED',
+        action: existing ? (allowFinalizedEdit ? 'CONSULTATION_AMENDED' : 'CONSULTATION_UPDATED') : 'CONSULTATION_CREATED',
         entity: 'opd_consultation',
         entityId: consultationId,
         newValue: { visitId, diagnosis: payload.diagnosis, followUp: payload.followUpDate }
