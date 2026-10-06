@@ -1,6 +1,8 @@
 -- =====================================================================
 -- 1004_agent_portal_referrals.sql
 -- Agent portal + referral attribution across patients, OPD and diagnostics.
+
+ALTER TABLE lab_orders MODIFY COLUMN source ENUM('DOCTOR','PATIENT','RECEPTION','LAB','AGENT') NOT NULL DEFAULT 'RECEPTION';
 -- =====================================================================
 
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS referral_code VARCHAR(80) NULL AFTER created_by;
