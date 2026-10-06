@@ -111,13 +111,13 @@ body.print-doc {
 .rx-rmp{min-width:230px;text-align:right;font-size:8.5px;line-height:1.35}
 .rx-rmp strong{display:block;font-size:12px}
 .rx-rmp span{display:block}
-.rx-health-barcode{width:118px;flex:0 0 118px;text-align:center;align-self:flex-start;font-size:7px;line-height:1.15}
+.rx-health-barcode{display:block!important;width:118px;min-width:118px;text-align:center;align-self:flex-start;font-size:7px;line-height:1.15}
 .rx-health-barcode img{display:block;width:112px;height:32px;object-fit:contain;margin:0 auto 2px}
 .rx-health-barcode span{display:block;white-space:nowrap}
 @media print{
   .rx-health-barcode{break-inside:avoid;page-break-inside:avoid}
 }
-.rx-patient-bar{display:grid;grid-template-columns:1.35fr 1fr 1.15fr;gap:6px;padding:5px 7px;background:#f3f7f7;border:1px solid #d7e3e3;border-radius:4px;margin-bottom:6px}
+.rx-patient-bar{display:grid;grid-template-columns:1.35fr 1fr 1.15fr 118px;gap:6px;padding:5px 7px;background:#f3f7f7;border:1px solid #d7e3e3;border-radius:4px;margin-bottom:6px}
 .rx-patient-bar>div{display:flex;gap:8px;flex-wrap:wrap}
 .rx-patient-bar span{white-space:nowrap}
 .rx-complementary-mark{position:absolute;right:4px;top:55px;width:25px;height:25px;border:3px solid #b91c1c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#b91c1c;font-size:16px;background:#fff}
@@ -170,8 +170,8 @@ body.print-doc {
 
 /* Doctor prescription is printed on pre-printed hospital stationery. */
 .rx-preprinted-letterhead-space{
-  height:36mm;
-  min-height:36mm;
+  height:39mm;
+  min-height:39mm;
   width:100%;
 }
 @media print{
@@ -182,7 +182,91 @@ body.print-doc {
     margin:0;
   }
   .rx-preprinted-letterhead-space{
-    height:36mm;
-    min-height:36mm;
+    height:39mm;
+    min-height:39mm;
+  }
+}
+
+
+/* Reception blank-prescription stationery chooser. */
+.blank-print-choice{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:#f7f9f9;
+}
+.blank-print-choice-card{
+  width:min(620px,100%);
+  padding:32px;
+  background:#fff;
+  border:1px solid #d7e3e3;
+  border-radius:12px;
+  box-shadow:0 8px 30px rgba(0,0,0,.08);
+  text-align:center;
+}
+.blank-print-choice-card h2{margin:0 0 8px;font-size:24px}
+.blank-print-choice-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+.blank-prescription-preprinted-space{
+  height:39mm;
+  min-height:39mm;
+  width:100%;
+}
+.blank-prescription-meta{
+  display:grid;
+  grid-template-columns:1.35fr 1.2fr 150px;
+  gap:14px;
+  align-items:start;
+  border-top:1px solid #cbdada;
+  border-bottom:1px solid #cbdada;
+  padding:8px 0;
+  margin-bottom:8px;
+}
+.blank-prescription-doctor,
+.blank-prescription-patient{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  font-size:10px;
+  line-height:1.3;
+}
+.blank-prescription-doctor strong,
+.blank-prescription-patient>strong{font-size:12px}
+.blank-prescription-health-barcode{
+  text-align:center;
+  font-size:7px;
+  line-height:1.15;
+}
+.blank-prescription-health-barcode img{
+  display:block;
+  width:140px;
+  height:40px;
+  object-fit:contain;
+  margin:0 auto 2px;
+}
+.blank-prescription-health-barcode span{display:block;white-space:nowrap}
+.blank-prescription-writing-area{
+  min-height:calc(297mm - 24mm - 39mm - 52px);
+}
+@media print{
+  .blank-print-choice{display:none!important}
+  .blank-prescription-sheet{
+    min-height:calc(297mm - 24mm);
+    height:calc(297mm - 24mm);
+    padding:0;
+    margin:0;
+  }
+  .blank-prescription-preprinted-space{
+    height:39mm;
+    min-height:39mm;
+  }
+  .blank-prescription-meta{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  .blank-prescription-writing-area{
+    min-height:0;
+    height:calc(297mm - 24mm - 39mm - 52px);
   }
 }

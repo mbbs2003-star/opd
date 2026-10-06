@@ -1,8 +1,64 @@
 <script src="/js/print.js"></script>
 <link rel="stylesheet" href="/css/print.css">
 
-<div class="print-sheet blank-prescription-sheet">
-  <div class="blank-prescription-letterhead">
-    <%- include('./_header') %>
+<% if (!mode) { %>
+<div class="blank-print-choice no-print">
+  <div class="blank-print-choice-card">
+    <h2>Print Blank Prescription</h2>
+    <p>Choose the stationery being used for this prescription.</p>
+    <div class="blank-print-choice-actions">
+      <a class="btn btn-primary" target="_blank" href="/opd/appointments/<%= appointment.id %>/blank-prescription?mode=full">
+        <i class="bi bi-file-earmark-text"></i> Full Hospital Letterhead
+      </a>
+      <a class="btn btn-outline-primary" target="_blank" href="/opd/appointments/<%= appointment.id %>/blank-prescription?mode=preprinted">
+        <i class="bi bi-printer"></i> Pre-printed Letterhead
+      </a>
+    </div>
+    <div class="small text-muted mt-3">
+      Pre-printed option leaves 39 mm blank at the top, matching the doctor prescription print.
+    </div>
   </div>
 </div>
+<% } else { %>
+<div class="print-sheet blank-prescription-sheet">
+  <% if (mode === 'full') { %>
+    <div class="blank-prescription-letterhead">
+      <%- include('./_header') %>
+    </div>
+  <% } else { %>
+    <div class="blank-prescription-preprinted-space" aria-label="Reserved space for pre-printed hospital letterhead"></div>
+  <% } %>
+
+  <div class="blank-prescription-meta">
+    <div class="blank-prescription-doctor">
+      <strong>Dr. <%= doctor.doctor_name || appointment.doctor_name || 'Doctor' %></strong>
+      <% if (doctor.qualification) { %><span><%= doctor.qualification %></span><% } %>
+      <% if (doctor.specialisation) { %><span><%= doctor.specialisation %></span><% } %>
+      <% if (doctor.professional_reg_number) { %><span>Reg. No. <%= doctor.professional_reg_number %></span><% } %>
+      <% if (doctor.doctor_mobile || doctor.doctor_email) { %><span><%= [doctor.doctor_mobile, doctor.doctor_email].filter(Boolean).join(' · ') %></span><% } %>
+      <% if (doctor.doctor_address) { %><span><%= doctor.doctor_address %></span><% } %>
+    </div>
+
+    <div class="blank-prescription-patient">
+      <strong><%= appointment.patient_name %></strong>
+      <span><%= appointment.age_years || '—' %> yrs · <%= appointment.gender || '—' %></span>
+      <span>Health ID: <strong><%= appointment.health_id %></strong></span>
+      <% if (appointment.mobile) { %><span>Mob: <%= appointment.mobile %></span><% } %>
+    </div>
+
+    <% if (barcodeDataUri && appointment.health_id) { %>
+      <div class="blank-prescription-health-barcode">
+        <img src="<%= barcodeDataUri %>" alt="Health ID barcode">
+        <span>Health ID: <strong><%= appointment.health_id %></strong></span>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="blank-prescription-writing-area" aria-label="Blank prescription writing area"></div>
+
+  <div class="print-actions no-print">
+    <button type="button" data-print-action="print" class="btn btn-primary">Print Prescription</button>
+    <button type="button" data-print-action="close" class="btn btn-outline-secondary">Close</button>
+  </div>
+</div>
+<% } %>
