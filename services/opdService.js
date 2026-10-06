@@ -3,6 +3,7 @@ const sequenceService = require('./sequenceService');
 const scheduleService = require('./scheduleService');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const referralService = require('./referralService');
 const { calculatePregnancy: calculatePregnancyFromLmp } = require('../utils/pregnancyCalculator');
 
 function calculatePregnancy(lmpDate, pregnancyStatus, asOfDate) {
@@ -58,13 +59,26 @@ async function bookAppointment(payload, actorUserId) {
       : 'UNKNOWN';
 
     const [[patient]] = await conn.execute(
-      'SELECT id, health_id, name, gender, status FROM patients WHERE id = :id AND deleted_at IS NULL',
+      'SELECT id, health_id, name, gender, status, referral_code, referral_provider_id FROM patients WHERE id = :id AND deleted_at IS NULL',
       { id: patientId }
     );
     if (!patient) throw new AppError('Patient not found', 404);
     if (patient.status === 'SUSPENDED') throw new AppError('This patient is suspended. Restore the patient before booking an appointment.', 409);
     const isFemale = String(patient.gender || '').toLowerCase() === 'female';
     if (!isFemale) obstetricStatus = 'UNKNOWN';
+
+    let referralCode = patient.referral_code || null;
+    let referralProviderId = patient.referral_provider_id || null;
+    if (payload.referralCode) {
+      const normalized = referralService.normalizeCode(payload.referralCode);
+      const [[provider]] = await conn.execute(
+        'SELECT id, referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',
+        { code: normalized }
+      );
+      if (!provider) throw new AppError('The selected referral code is invalid or inactive.', 422);
+      referralCode = provider.referral_code;
+      referralProviderId = provider.id;
+    }
     const obstetric = isFemale
       ? calculatePregnancy(payload.lmpDate, obstetricStatus, appointmentDate)
       : { status: 'UNKNOWN', weeks: null, days: null, edd: null };
@@ -96,13 +110,13 @@ async function bookAppointment(payload, actorUserId) {
          appointment_date, slot_time, token_number, reason,
          lmp_date, gravida, para, abortions, pregnancy_status,
          gestational_age_weeks, gestational_age_days, estimated_due_date, obstetric_notes,
-         status, created_by, referral_code)
+         status, created_by, referral_code, referral_provider_id)
        VALUES
         (:code, :patientId, :doctorId, :branchId, :departmentId,
          :date, :slotTime, :token, :reason,
          :lmpDate, :gravida, :para, :abortions, :pregnancyStatus,
          :gaWeeks, :gaDays, :edd, :obstetricNotes,
-         'BOOKED', :createdBy, :referralCode)`,
+         'BOOKED', :createdBy, :referralCode, :referralProviderId)`,
       {
         code: appointmentCode,
         patientId,
@@ -123,7 +137,8 @@ async function bookAppointment(payload, actorUserId) {
         edd: obstetric.edd,
         obstetricNotes: payload.obstetricNotes || null,
         createdBy: actorUserId,
-        referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null
+        referralCode,
+        referralProviderId
       }
     );
     const appointmentId = apptResult.insertId;
