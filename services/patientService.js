@@ -211,8 +211,8 @@ async function searchPatients({ q, limit = 10 }) {
 async function listPatients({ page = 1, pageSize = 20 }) {
   const offset = (page - 1) * pageSize;
   const [rows] = await pool.query(
-    `SELECT p.id, p.health_id, p.registration_number, p.name, p.gender, p.age_years, p.mobile, p.referral_code, p.referral_provider_id, p.created_at
-     FROM patients p WHERE p.deleted_at IS NULL
+    `SELECT p.id, p.health_id, p.registration_number, p.name, p.gender, p.age_years, p.mobile, p.referral_code, p.referral_provider_id, rp.provider_name AS referral_provider_name, p.created_at
+     FROM patients p LEFT JOIN referral_providers rp ON rp.id=p.referral_provider_id WHERE p.deleted_at IS NULL
      ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset`,
     { limit: pageSize, offset }
   );
@@ -250,12 +250,14 @@ async function getPatientProfile(healthIdOrId) {
             d.doctor_code, du.name AS doctor_name, dept.name AS department_name,
             c.diagnosis, c.follow_up_date,
             i.id AS invoice_id, i.invoice_number, i.status AS invoice_status, i.net_amount,
+            a.referral_code, rp.provider_name AS referral_provider_name,
             (SELECT pr.id FROM prescriptions pr WHERE pr.visit_id = v.id AND pr.is_current = 1 ORDER BY pr.version DESC LIMIT 1) AS prescription_id
      FROM opd_visits v
      JOIN doctors d ON d.id = v.doctor_id
      JOIN users du ON du.id = d.user_id
      JOIN appointments a ON a.id = v.appointment_id
      JOIN departments dept ON dept.id = a.department_id
+     LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
      LEFT JOIN opd_consultations c ON c.visit_id = v.id
      LEFT JOIN invoices i ON i.visit_id = v.id
      WHERE v.patient_id = :id
