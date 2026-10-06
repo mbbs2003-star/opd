@@ -182,7 +182,14 @@
         <hr class="my-4">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div><h5 class="mb-0">Rx <span class="text-muted fw-normal">Prescription / Medication</span></h5><div class="small text-muted">Use the same Save button below for consultation + prescription.</div></div>
-          <% if (hasPrescription) { %><span class="badge text-bg-primary">Current v<%= currentPrescriptions[0].version %></span><% } %>
+          <% if (hasPrescription) { %>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge text-bg-primary">Current v<%= currentPrescriptions[0].version %></span>
+              <% if (visit.status === 'COMPLETED') { %>
+                <a href="/prescriptions/<%= currentPrescriptions[0].id %>/edit" class="btn btn-sm btn-warning"><i class="bi bi-pencil-square"></i> Edit Prescription</a>
+              <% } %>
+            </div>
+          <% } %>
         </div>
         <datalist id="medicineList"><% medicines.forEach(function(m) { %><option value="<%= m.name %>" label="<%= [m.strength, m.composition, m.form].filter(Boolean).join(' · ') %>"></option><% }) %></datalist>
         <div class="table-responsive rx-editor-scroll">
