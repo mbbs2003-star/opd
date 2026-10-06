@@ -1,0 +1,94 @@
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0">Edit Prescription</h4>
+    <div class="text-muted">
+      <strong><%= prescription.prescription_code %></strong> · Version <%= prescription.version %> ·
+      Patient: <%= prescription.patient_name %> · Health ID: <%= prescription.health_id %>
+    </div>
+  </div>
+  <a class="btn btn-outline-secondary" href="/prescriptions/<%= prescription.id %>">Cancel</a>
+</div>
+
+<div class="alert alert-warning">
+  <i class="bi bi-info-circle me-1"></i>
+  Saving creates a <strong>new prescription version</strong>. The previous version is retained in the patient's record and is never overwritten.
+</div>
+
+<form method="POST" action="/prescriptions/<%= prescription.id %>/amend" class="card" id="prescriptionEditForm">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Medicines</strong>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="addMedicine">+ Add Medicine</button>
+  </div>
+
+  <div class="card-body">
+    <datalist id="medicineList">
+      <% medicines.forEach(function(m) { %>
+        <option value="<%= m.name %>"><%= [m.strength, m.composition, m.form].filter(Boolean).join(' · ') %></option>
+      <% }) %>
+    </datalist>
+
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle" id="medicineTable">
+        <thead>
+          <tr>
+            <th>Medicine *</th><th>Composition</th><th>Form</th><th>Dose</th>
+            <th>Frequency</th><th>Duration</th><th>Route</th><th>Qty</th><th>Instructions</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="medicineRows"></tbody>
+      </table>
+    </div>
+
+    <div class="mt-4">
+      <label class="form-label fw-semibold">Reason for amendment *</label>
+      <textarea name="amendmentReason" class="form-control" rows="3" required
+        placeholder="Explain why the prescription is being corrected or updated..."></textarea>
+      <div class="form-text">This reason is stored with the new version for the clinical audit trail.</div>
+    </div>
+  </div>
+
+  <div class="card-footer d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="/prescriptions/<%= prescription.id %>">Cancel</a>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-save2 me-1"></i> Save as New Version</button>
+  </div>
+</form>
+
+<script>
+(function(){
+  const tbody=document.getElementById('medicineRows');
+  const add=document.getElementById('addMedicine');
+  const existing=<%- JSON.stringify(items || []) %>;
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+
+  function row(item={}){
+    return '<tr>'+
+      '<td><input type="hidden" name="medicineId" value="'+esc(item.medicine_id)+'"><input name="medicineName" class="form-control" list="medicineList" required value="'+esc(item.medicine_name_freetext||item.medicine_name)+'"></td>'+
+      '<td><input name="composition" class="form-control" value="'+esc(item.composition)+'"></td>'+
+      '<td><input name="medicineForm" class="form-control" value="'+esc(item.medicine_form)+'"></td>'+
+      '<td><input name="dosage" class="form-control" value="'+esc(item.dosage)+'"></td>'+
+      '<td><input name="frequency" class="form-control" placeholder="OD / BD / TDS" value="'+esc(item.frequency)+'"></td>'+
+      '<td><input name="duration" class="form-control" value="'+esc(item.duration)+'"></td>'+
+      '<td><input name="route" class="form-control" value="'+esc(item.route)+'"></td>'+
+      '<td><input name="quantity" class="form-control" value="'+esc(item.quantity)+'"></td>'+
+      '<td><input name="instructions" class="form-control" value="'+esc(item.instructions)+'"></td>'+
+      '<td><button type="button" class="btn btn-sm btn-outline-danger remove-row">&times;</button></td>'+
+    '</tr>';
+  }
+
+  function addRow(item){
+    tbody.insertAdjacentHTML('beforeend',row(item||{}));
+  }
+
+  existing.forEach(addRow);
+  if(!existing.length) addRow({});
+  add.addEventListener('click',()=>addRow({}));
+  tbody.addEventListener('click',e=>{
+    if(e.target.classList.contains('remove-row') && tbody.rows.length>1) e.target.closest('tr').remove();
+  });
+})();
+</script>
