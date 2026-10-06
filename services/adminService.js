@@ -24,11 +24,15 @@ async function listUsers() {
 
 async function createUser(payload, actorUserId) {
   return withTransaction(async (conn) => {
-    const email = payload.email.trim().toLowerCase();
+    const email = String(payload.email || '').trim().toLowerCase();
+    const temporaryPassword = String(payload.temporaryPassword || '');
+    if (!email || !payload.name || temporaryPassword.length < 12 || !/[A-Z]/.test(temporaryPassword) || !/[a-z]/.test(temporaryPassword) || !/\d/.test(temporaryPassword)) {
+      throw new AppError('User name, email and a 12+ character temporary password with uppercase, lowercase and a number are required.', 422);
+    }
     const [existing] = await conn.execute('SELECT id FROM users WHERE email = :email', { email });
     if (existing.length) throw new AppError('A user with this email already exists', 409);
 
-    const passwordHash = await bcrypt.hash(payload.temporaryPassword, authConfig.bcryptRounds);
+    const passwordHash = await bcrypt.hash(temporaryPassword, authConfig.bcryptRounds);
     const [result] = await conn.execute(
       `INSERT INTO users (branch_id, name, email, mobile, password_hash, must_reset_password, is_active)
        VALUES (:branchId, :name, :email, :mobile, :passwordHash, 1, 1)`,
