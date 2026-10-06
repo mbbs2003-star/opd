@@ -58,12 +58,20 @@ async function bookAppointment(payload, actorUserId) {
     if (patient.status === 'SUSPENDED') throw new AppError('This patient is suspended. Restore the patient before booking an appointment.', 409);
 
     const [[doctor]] = await conn.execute(
-      'SELECT id, consultation_fee FROM doctors WHERE id = :id AND deleted_at IS NULL AND is_active = 1',
+      `SELECT id, consultation_fee, branch_id, department_id
+       FROM doctors
+       WHERE id = :id AND deleted_at IS NULL AND is_active = 1`,
       { id: doctorId }
     );
     if (!doctor) throw new AppError('Doctor not found or inactive', 404);
+    if (Number(doctor.branch_id) !== Number(branchId)) {
+      throw new AppError('Selected doctor does not belong to this branch.', 422);
+    }
+    if (Number(doctor.department_id) !== Number(departmentId)) {
+      throw new AppError('Selected doctor does not belong to the selected department.', 422);
+    }
 
-    // Server-side slot validation with row locking (never trust the client).
+    // Server-side slot validation (never trust the client).
     const check = await scheduleService.isSlotBookable(conn, doctorId, appointmentDate, slotTime);
     if (!check.ok) throw new AppError(check.reason, 409);
 
