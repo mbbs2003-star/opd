@@ -76,13 +76,13 @@ async function bookAppointment(payload, actorUserId) {
          appointment_date, slot_time, token_number, reason,
          lmp_date, gravida, para, abortions, pregnancy_status,
          gestational_age_weeks, gestational_age_days, estimated_due_date, obstetric_notes,
-         status, created_by)
+         status, created_by, referral_code)
        VALUES
         (:code, :patientId, :doctorId, :branchId, :departmentId,
          :date, :slotTime, :token, :reason,
          :lmpDate, :gravida, :para, :abortions, :pregnancyStatus,
          :gaWeeks, :gaDays, :edd, :obstetricNotes,
-         'BOOKED', :createdBy)`,
+         'BOOKED', :createdBy, :referralCode)`,
       {
         code: appointmentCode,
         patientId,
@@ -102,7 +102,8 @@ async function bookAppointment(payload, actorUserId) {
         gaDays: obstetric.days,
         edd: obstetric.edd,
         obstetricNotes: payload.obstetricNotes || null,
-        createdBy: actorUserId
+        createdBy: actorUserId,
+        referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null
       }
     );
     const appointmentId = apptResult.insertId;
@@ -269,6 +270,8 @@ async function listAppointments({ date = null, doctorId = null, status = null, p
     `SELECT a.id, a.appointment_code, a.appointment_date, a.slot_time, a.token_number, a.status,
             p.health_id, p.name AS patient_name, p.age_years, p.gender,
             u.name AS doctor_name, dept.name AS department_name,
+            creator.name AS booked_by_name,
+            creator.id AS booked_by_id,
             v.id AS visit_id, v.status AS visit_status,
             i.id AS invoice_id, i.invoice_number, i.status AS payment_status, i.net_amount
      FROM appointments a
@@ -276,6 +279,7 @@ async function listAppointments({ date = null, doctorId = null, status = null, p
      JOIN doctors d ON d.id = a.doctor_id
      JOIN users u ON u.id = d.user_id
      JOIN departments dept ON dept.id = a.department_id
+     LEFT JOIN users creator ON creator.id = a.created_by
      LEFT JOIN opd_visits v ON v.appointment_id = a.id
      LEFT JOIN invoices i ON i.visit_id = v.id
      WHERE (:date IS NULL OR a.appointment_date = :date)
