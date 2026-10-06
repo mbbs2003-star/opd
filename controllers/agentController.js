@@ -32,6 +32,15 @@ async function newPatient(req,res,next){
 
 async function createPatient(req,res,next){
   try {
+    const name=String(req.body.name||'').trim();
+    const mobile=String(req.body.mobile||'').trim();
+    const gender=String(req.body.gender||'').trim();
+    if(!name || !gender || !mobile || !req.body.referralCode){
+      throw new AppError('Patient name, gender, mobile number and referral number are required.',422);
+    }
+    if(!/^[6-9]\\d{9}$/.test(mobile)){
+      throw new AppError('Enter a valid 10-digit Indian mobile number.',422);
+    }
     const result=await agentService.registerPatient(req.body,req.user.id,branchId(req));
     req.flash('success',`Patient registered successfully. Health ID: ${result.healthId}`);
     res.redirect('/agent/patients?registered='+encodeURIComponent(result.healthId));
@@ -72,7 +81,7 @@ async function bookOpd(req,res,next){
       abortions:req.body.abortions,
       pregnancyStatus:req.body.pregnancyStatus,
       obstetricNotes:req.body.obstetricNotes,
-      referralCode:agentService.referralCode(req.body.referralCode,req.user.id)
+      referralCode:agentService.requireReferralCode(req.body.referralCode,req.user.id)
     },req.user.id);
     req.flash('success',`OPD booked for ${patient.name}. Token ${String(result.token).padStart(3,'0')} — ${result.appointmentCode}`);
     res.redirect('/agent/patients');
