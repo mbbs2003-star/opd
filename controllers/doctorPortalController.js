@@ -83,7 +83,7 @@ async function callNext(req, res, next) {
   }
 }
 
-async function consultation(req, res, next) {
+async function consultation(req, res, next, forcedQuery = null) {
   try {
     requireDoctorContext(req);
     await consultationService.assertDoctorCanAccessVisit(req.params.visitId, req.user);
@@ -101,6 +101,7 @@ async function consultation(req, res, next) {
       "SELECT value FROM prescription_option_values WHERE option_type = 'ROUTE' ORDER BY value"
     );
 
+    const editMode = String((forcedQuery || req.query).edit || '') === '1';
     res.render('doctors/consultation', {
       title: `Consultation — ${context.visit.patient_name}`,
       ...context,
@@ -111,6 +112,11 @@ async function consultation(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+async function editConsultation(req, res, next) {
+  const query = new URLSearchParams({ edit: '1' });
+  return consultation(req, res, next, query);
 }
 
 async function saveConsultation(req, res, next) {
@@ -195,4 +201,4 @@ async function saveComplaintSuggestion(req, res, next) {
   }
 }
 
-module.exports = { dashboard, queue, callNext, consultation, saveConsultation, completeVisit, profile, updateProfile, saveComplaintSuggestion };
+module.exports = { dashboard, queue, callNext, consultation, editConsultation, saveConsultation, completeVisit, profile, updateProfile, saveComplaintSuggestion };

@@ -16,6 +16,7 @@ router.get('/queue', requirePermission('consultation.create'), asyncHandler(doct
 router.post('/queue/call-next', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.callNext));
 
 router.get('/consultation/:visitId', requirePermission('consultation.create'), asyncHandler(doctorPortalController.consultation));
+router.get('/consultation/:visitId/edit', requirePermission('consultation.create'), asyncHandler(doctorPortalController.editConsultation));
 router.post('/consultation/:visitId', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.saveConsultation));
 router.post('/complaints/suggestions', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.saveComplaintSuggestion));
 router.post('/consultation/:visitId/complete', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.completeVisit));
