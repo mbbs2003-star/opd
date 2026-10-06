@@ -3,8 +3,16 @@ const patientService = require('./patientService');
 const AppError = require('../utils/AppError');
 
 function referralCode(value, userId) {
-  const supplied = String(value || '').trim().toUpperCase().replace(/\s+/g, '-');
+  const supplied = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   return supplied || ('AGT-' + String(userId));
+}
+
+function requireReferralCode(value, userId) {
+  const code = referralCode(value, userId);
+  if (!code || code.length < 3 || code.length > 80) {
+    throw new AppError('Enter a valid referral number/code (3–80 characters).', 422);
+  }
+  return code;
 }
 
 async function dashboard(agentId, branchId) {
@@ -79,7 +87,7 @@ async function referralStats(branchId) {
 }
 
 async function registerPatient(payload, agentId, branchId) {
-  return patientService.registerPatient({ ...payload, branchId, referralCode: referralCode(payload.referralCode, agentId) }, agentId);
+  return patientService.registerPatient({ ...payload, branchId, referralCode: requireReferralCode(payload.referralCode, agentId) }, agentId);
 }
 
 async function getBookingContext(branchId) {
@@ -104,4 +112,4 @@ async function getPatient(healthId, branchId) {
   return data.patient;
 }
 
-module.exports = { dashboard, patientList, referralStats, registerPatient, referralCode, getBookingContext, getTestContext, getPatient };
+module.exports = { dashboard, patientList, referralStats, registerPatient, referralCode, requireReferralCode, getBookingContext, getTestContext, getPatient };
