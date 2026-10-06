@@ -178,7 +178,7 @@ async function listOrders(branchId,filters={}) {
   const params={branchId}; const where=['l.branch_id=:branchId'];
   if(filters.status){params.status=filters.status;where.push('o.status=:status');}
   if(filters.q){params.q='%'+String(filters.q).trim()+'%';where.push('(o.order_code LIKE :q OR p.health_id LIKE :q OR p.name LIKE :q)');}
-  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.referral_code,p.health_id,p.name patient_name,l.name laboratory_name,du.name ordered_by_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN patients p ON p.id=o.patient_id JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN users du ON du.id=o.ordered_by LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE '+where.join(' AND ')+' GROUP BY o.id ORDER BY o.created_at DESC LIMIT 250',params);
+  const [rows]=await pool.execute('SELECT o.id,o.order_code,o.booking_date,o.source,o.priority,o.status,o.total_amount,o.net_amount,o.payment_status,o.created_at,o.referral_code,p.health_id,p.name patient_name,l.name laboratory_name,du.name ordered_by_name,COUNT(oi.id) total_tests,SUM(oi.status="REPORTED") reported_tests FROM lab_orders o JOIN patients p ON p.id=o.patient_id JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN users du ON du.id=o.ordered_by LEFT JOIN lab_order_items oi ON oi.lab_order_id=o.id WHERE '+where.join(' AND ')+' GROUP BY o.id, du.name ORDER BY o.created_at DESC LIMIT 250',params);
   return rows;
 }
 
