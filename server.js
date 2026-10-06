@@ -18,6 +18,23 @@ async function start() {
     // Fail fast if the database isn't reachable.
     const conn = await pool.getConnection();
     await conn.ping();
+
+    // Keep deployments resilient when application code is updated before the
+    // migration runner is executed. This is idempotent and only adds the
+    // optional Rx Notes column when it is genuinely missing.
+    const [rxNotesColumns] = await conn.query(
+      `SELECT COUNT(*) AS count
+       FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'prescriptions'
+         AND COLUMN_NAME = 'rx_notes'`
+    );
+    if (!Number(rxNotesColumns[0]?.count)) {
+      await conn.query(
+        'ALTER TABLE prescriptions ADD COLUMN rx_notes TEXT NULL AFTER barcode_value'
+      );
+      console.log('[DB] Added missing prescriptions.rx_notes column.');
+    }
     conn.release();
     console.log('[DB] Connection verified.');
   } catch (err) {
