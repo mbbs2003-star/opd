@@ -95,12 +95,12 @@
         <div class="row g-2 mt-1">
           <div class="col-6 col-md-4"><label class="form-label small">Pregnancy status</label><select name="pregnancyStatus" class="form-select form-select-sm" <%= isFinalized ? 'disabled' : '' %>><option value="">Not recorded</option><option value="NOT_PREGNANT" <%= visit.pregnancy_status === 'NOT_PREGNANT' ? 'selected' : '' %>>Not pregnant</option><option value="PREGNANT" <%= visit.pregnancy_status === 'PREGNANT' ? 'selected' : '' %>>Pregnant</option></select></div>
           <div class="col-6 col-md-4"><label class="form-label small">LMP</label><input type="date" name="lmpDate" class="form-control form-control-sm" value="<%= visit.lmp_date ? String(visit.lmp_date).slice(0,10) : '' %>" <%= isFinalized ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Gravida (G)</label><input type="number" min="0" name="gravida" class="form-control form-control-sm" value="<%= visit.gravida ?? '' %>" <%= isFinalized ? 'readonly' : '' %>></div>
+          <div class="col-6 col-md-4" id="doctorGravidaField"><label class="form-label small">Gravida (G)</label><input type="number" min="0" name="gravida" class="form-control form-control-sm" value="<%= visit.gravida ?? '' %>" <%= isFinalized ? 'readonly' : '' %>></div>
           <div class="col-6 col-md-4"><label class="form-label small">Para (P)</label><input type="number" min="0" name="para" class="form-control form-control-sm" value="<%= visit.para ?? '' %>" <%= isFinalized ? 'readonly' : '' %>></div>
           <div class="col-6 col-md-4"><label class="form-label small">Abortions (A)</label><input type="number" min="0" name="abortions" class="form-control form-control-sm" value="<%= visit.abortions ?? '' %>" <%= isFinalized ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Gestational age (weeks)</label><input type="number" min="0" name="gestationalAgeWeeks" class="form-control form-control-sm" value="<%= visit.gestational_age_weeks ?? (pregnancyCalculation?.gestationalAgeWeeks ?? '') %>" <%= isFinalized ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">Gestational age (days)</label><input type="number" min="0" max="6" name="gestationalAgeDays" class="form-control form-control-sm" value="<%= visit.gestational_age_days ?? (pregnancyCalculation?.gestationalAgeDays ?? '') %>" <%= isFinalized ? 'readonly' : '' %>></div>
-          <div class="col-6 col-md-4"><label class="form-label small">EDD</label><input type="date" name="estimatedDueDate" class="form-control form-control-sm" value="<%= visit.estimated_due_date ? String(visit.estimated_due_date).slice(0,10) : '' %>" <%= isFinalized ? 'readonly' : '' %>></div>
+          <div class="col-6 col-md-4"><label class="form-label small">Gestational age (weeks)</label><input type="number" min="0" name="gestationalAgeWeeks" id="doctorGestationalWeeks" class="form-control form-control-sm" value="<%= visit.gestational_age_weeks ?? (pregnancyCalculation?.gestationalAgeWeeks ?? '') %>" readonly></div>
+          <div class="col-6 col-md-4"><label class="form-label small">Gestational age (days)</label><input type="number" min="0" max="6" name="gestationalAgeDays" id="doctorGestationalDays" class="form-control form-control-sm" value="<%= visit.gestational_age_days ?? (pregnancyCalculation?.gestationalAgeDays ?? '') %>" readonly></div>
+          <div class="col-6 col-md-4"><label class="form-label small">EDD</label><input type="date" name="estimatedDueDate" id="doctorEdd" class="form-control form-control-sm" value="<%= visit.estimated_due_date ? String(visit.estimated_due_date).slice(0,10) : '' %>" readonly></div>
           <div class="col-12"><label class="form-label small">Obstetric notes</label><textarea name="obstetricNotes" class="form-control form-control-sm" rows="2" <%= isFinalized ? 'readonly' : '' %>><%= visit.obstetric_notes || '' %></textarea></div>
         </div>
       </div>
@@ -360,6 +360,67 @@
   syncFindings();
   form.addEventListener('submit',()=>{syncHistory();syncFindings();});custom.addEventListener('input',syncHistory);custom.addEventListener('click',e=>{if(e.target.classList.contains('ph-remove')){e.target.closest('.col-md-6').remove();syncHistory();}});
   if(ph.surgery){document.getElementById('phSurgery').value=ph.surgery.value||'NO';document.getElementById('phSurgeryOther').value=ph.surgery.other||'';}if(ph.sleep){document.getElementById('phSleep').value=ph.sleep.value||'NORMAL';document.getElementById('phSleepOther').value=ph.sleep.other||'';}if(ph.drinking){document.getElementById('phDrinking').value=ph.drinking.value||'NO';document.getElementById('phDrinkingOther').value=ph.drinking.other||'';}if(ph.bowel){document.getElementById('phBowel').value=ph.bowel.value||'REGULAR';document.getElementById('phBowelOther').value=ph.bowel.other||'';}['phSurgery','phSleep','phDrinking','phBowel'].forEach(id=>document.getElementById(id)?.dispatchEvent(new Event('change')));sync();syncHistory();
+})();
+</script>
+<script>
+(function () {
+  const status = document.querySelector('select[name="pregnancyStatus"]');
+  const lmp = document.querySelector('input[name="lmpDate"]');
+  const gravidaField = document.getElementById('doctorGravidaField');
+  const weeks = document.getElementById('doctorGestationalWeeks');
+  const days = document.getElementById('doctorGestationalDays');
+  const edd = document.getElementById('doctorEdd');
+  if (status && lmp) {
+    function parseDate(value) {
+      const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return null;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
+    }
+    function fmt(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    function calculatePregnancy() {
+      const pregnant = status.value === 'PREGNANT';
+      if (gravidaField) gravidaField.style.display = pregnant ? '' : 'none';
+      if (!pregnant) {
+        if (weeks) weeks.value = '';
+        if (days) days.value = '';
+        if (edd) edd.value = '';
+        return true;
+      }
+      const l = parseDate(lmp.value);
+      if (!l) {
+        if (weeks) weeks.value = '';
+        if (days) days.value = '';
+        if (edd) edd.value = '';
+        return false;
+      }
+      const today = new Date();
+      const asOf = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const elapsed = Math.floor((asOf - l) / 86400000);
+      if (elapsed < 0) {
+        if (weeks) weeks.value = '';
+        if (days) days.value = '';
+        if (edd) edd.value = '';
+        return false;
+      }
+      if (weeks) weeks.value = Math.floor(elapsed / 7);
+      if (days) days.value = elapsed % 7;
+      const due = new Date(l.getFullYear(), l.getMonth(), l.getDate());
+      due.setDate(due.getDate() + 280);
+      if (edd) edd.value = fmt(due);
+      return true;
+    }
+    status.addEventListener('change', calculatePregnancy);
+    lmp.addEventListener('change', calculatePregnancy);
+    calculatePregnancy();
+    document.getElementById('consultationRxForm')?.addEventListener('submit', function(e) {
+      if (status.value === 'PREGNANT' && !calculatePregnancy()) {
+        e.preventDefault();
+        alert('Invalid input: please enter a valid LMP date that is not in the future.');
+        lmp.focus();
+      }
+    });
+  }
 })();
 </script>
 <script>
