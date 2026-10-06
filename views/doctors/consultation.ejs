@@ -88,6 +88,7 @@
     <form method="POST" action="/doctor/consultation/<%= visit.id %>" class="card mb-3" id="consultationRxForm">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="visitId" value="<%= visit.id %>">
+      <input type="hidden" name="_editMode" value="<%= editMode ? '1' : '0' %>">
 
       <% if (String(visit.gender || '').toLowerCase() === 'female') { %>
       <%- include('../partials/pregnancy-assessment', { pregnancy: visit, pregnancyCalculation, canEdit }) %>
