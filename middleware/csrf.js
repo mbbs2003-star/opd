@@ -48,7 +48,31 @@ function generate(req, res, options) {
 /** Makes the current CSRF token available to every EJS view as `csrfToken`. */
 function exposeCsrfToken(req, res, next) {
   try {
-    res.locals.csrfToken = generate(req, res);
+    /*
+     * The app uses saveUninitialized:false. A new anonymous browser session
+     * therefore has no hms.sid cookie until something writes to req.session.
+     * A CSRF token generated on the first GET is bound to that session id.
+     * If we don't persist the anonymous session before rendering the OTP/signup
+     * form, the following POST creates a different session id and the token
+     * correctly fails validation with "invalid csrf token".
+     *
+     * Mark the session as CSRF-initialized before generating the token so the
+     * session id used to sign the token is persisted and returned to the
+     * browser. This keeps the protection session-bound without disabling CSRF
+     * validation on OTP endpoints.
+     */
+    const initializeSessionCsrf = Boolean(req.session && !req.session.csrfInitialized);
+    if (initializeSessionCsrf) {
+      req.session.csrfInitialized = true;
+    }
+
+    // If this session predates the bootstrap flag, replace any stale CSRF
+    // cookie that may have been minted against an unsaved/previous session id.
+    res.locals.csrfToken = generate(
+      req,
+      res,
+      initializeSessionCsrf ? { overwrite: true } : undefined
+    );
   } catch (err) {
     return next(err);
   }
