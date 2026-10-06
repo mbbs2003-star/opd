@@ -2,19 +2,25 @@ const express=require('express');
 const router=express.Router();
 const controller=require('../controllers/agentController');
 const { requireAuth }=require('../middleware/auth');
-const { requirePermission }=require('../middleware/roles');
+const { requireRole }=require('../middleware/roles');
 const { csrfProtection }=require('../middleware/csrf');
 const asyncHandler=require('../utils/asyncHandler');
 
 router.use(requireAuth);
-router.get('/',requireRole('AGENT'),asyncHandler(controller.dashboard));
-router.get('/patients',requireRole('AGENT'),asyncHandler(controller.patients));
-router.get('/patients/new',requireRole('AGENT'),asyncHandler(controller.newPatient));
-router.post('/patients',requirePermission('agent.patient.create'),csrfProtection,asyncHandler(controller.createPatient));
-router.get('/opd/new',requireRole('AGENT'),asyncHandler(controller.opdForm));
-router.post('/opd',requirePermission('agent.appointment.create'),csrfProtection,asyncHandler(controller.bookOpd));
-router.get('/tests/new',requireRole('AGENT'),asyncHandler(controller.testForm));
-router.post('/tests',requirePermission('agent.lab.create'),csrfProtection,asyncHandler(controller.bookTest));
-router.get('/referrals',requireRole('AGENT'),asyncHandler(controller.referrals));
+
+// Agent portal actions are role-scoped. The Agent role is provisioned with
+// the corresponding permissions by the schema repair/role bootstrap, but
+// route access must not depend on stale permission rows in a production DB.
+const requireAgent=requireRole('AGENT');
+
+router.get('/',requireAgent,asyncHandler(controller.dashboard));
+router.get('/patients',requireAgent,asyncHandler(controller.patients));
+router.get('/patients/new',requireAgent,asyncHandler(controller.newPatient));
+router.post('/patients',requireAgent,csrfProtection,asyncHandler(controller.createPatient));
+router.get('/opd/new',requireAgent,asyncHandler(controller.opdForm));
+router.post('/opd',requireAgent,csrfProtection,asyncHandler(controller.bookOpd));
+router.get('/tests/new',requireAgent,asyncHandler(controller.testForm));
+router.post('/tests',requireAgent,csrfProtection,asyncHandler(controller.bookTest));
+router.get('/referrals',requireAgent,asyncHandler(controller.referrals));
 
 module.exports=router;
