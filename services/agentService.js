@@ -1,18 +1,16 @@
 const { pool } = require('../config/database');
 const patientService = require('./patientService');
 const AppError = require('../utils/AppError');
+const referralService = require('./referralService');
 
 function referralCode(value, userId) {
-  const supplied = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  return supplied || ('AGT-' + String(userId));
+  const supplied = referralService.normalizeCode(value);
+  return supplied || '';
 }
 
-function requireReferralCode(value, userId) {
-  const code = referralCode(value, userId);
-  if (!code || code.length < 3 || code.length > 80) {
-    throw new AppError('Enter a valid referral number/code (3–80 characters).', 422);
-  }
-  return code;
+async function requireReferralCode(value) {
+  const provider = await referralService.resolveActiveCode(value);
+  return provider;
 }
 
 async function dashboard(agentId, branchId) {
@@ -87,8 +85,11 @@ async function referralStats(branchId) {
 }
 
 async function registerPatient(payload, agentId, branchId) {
-  return patientService.registerPatient({ ...payload, branchId, referralCode: requireReferralCode(payload.referralCode, agentId) }, agentId);
+  const provider = await requireReferralCode(payload.referralCode);
+  return patientService.registerPatient({ ...payload, branchId, referralCode: provider.referral_code, referralProviderId: provider.id }, agentId);
 }
+
+async function getReferralProviders() { return referralService.listActiveProviders(); }
 
 async function getBookingContext(branchId) {
   const [departments] = await pool.execute('SELECT id,name FROM departments WHERE is_active=1 ORDER BY name');
@@ -112,4 +113,4 @@ async function getPatient(healthId, branchId) {
   return data.patient;
 }
 
-module.exports = { dashboard, patientList, referralStats, registerPatient, referralCode, requireReferralCode, getBookingContext, getTestContext, getPatient };
+module.exports = { dashboard, patientList, referralStats, registerPatient, referralCode, requireReferralCode, getReferralProviders, getBookingContext, getTestContext, getPatient };
