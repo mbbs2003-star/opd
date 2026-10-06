@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { pool } = require('../config/database');
 const authConfig = require('../config/auth');
+const appConfig = require('../config/appConfig');
 const auditService = require('../services/auditService');
 const patientAuthService = require('../services/patientAuthService');
 const emailService = require('../services/emailService');
@@ -296,7 +297,15 @@ function logout(req, res, next) {
   req.session.destroy((err) => {
     if (err) return next(err);
     res.clearCookie('hms.sid');
-    rotateCsrfToken(req, res);
+    // The session object no longer exists after destroy(). Do not generate a
+    // CSRF token from the destroyed request session; the next GET will create
+    // a fresh anonymous session and expose a fresh token.
+    res.clearCookie(appConfig.isProd ? '__Host-hms.csrf' : 'hms.csrf', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: appConfig.isProd,
+      path: '/'
+    });
     if (userId) auditService.log({ userId, action: 'LOGOUT', entity: 'user', entityId: userId }).catch(() => {});
     res.redirect('/auth/login');
   });
