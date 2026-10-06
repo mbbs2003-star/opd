@@ -214,9 +214,10 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     }
     const complementaryRequested = String(payload.complementaryRequested || '') === '1' ||
       payload.complementaryRequested === true || payload.complementaryRequested === 'on';
+    const allowFinalizedEdit = payload.allowFinalizedEdit === true || payload.allowFinalizedEdit === '1';
     if (existing) {
-      if (visit.status === 'COMPLETED') {
-        throw new AppError('This consultation is finalized and cannot be edited', 409);
+      if (visit.status === 'COMPLETED' && !allowFinalizedEdit) {
+        throw new AppError('This consultation is finalized. Open Edit Consultation to make a correction.', 409);
       }
       await conn.execute(
         `UPDATE opd_consultations SET complaints = :complaints, symptoms = :symptoms,
@@ -413,7 +414,7 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     await auditService.log(
       {
         userId: actorUserId,
-        action: existing ? 'CONSULTATION_UPDATED' : 'CONSULTATION_CREATED',
+        action: existing ? (allowFinalizedEdit ? 'CONSULTATION_AMENDED' : 'CONSULTATION_UPDATED') : 'CONSULTATION_CREATED',
         entity: 'opd_consultation',
         entityId: consultationId,
         newValue: { visitId, diagnosis: payload.diagnosis, followUp: payload.followUpDate }
