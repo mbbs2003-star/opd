@@ -83,14 +83,15 @@ async function createPrescription(visitId, items, actorUserId) {
 
     const [result] = await conn.execute(
       `INSERT INTO prescriptions
-        (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value, created_by)
-       VALUES (:code, :visitId, :patientId, :doctorId, 1, 1, :barcode, :createdBy)`,
+        (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value, rx_notes, created_by)
+       VALUES (:code, :visitId, :patientId, :doctorId, 1, 1, :barcode, :rxNotes, :createdBy)`,
       {
         code,
         visitId,
         patientId: visit.patient_id,
         doctorId: visit.doctor_id,
         barcode: visit.health_id,
+        rxNotes: null,
         createdBy: actorUserId
       }
     );
@@ -114,7 +115,7 @@ async function createPrescription(visitId, items, actorUserId) {
   });
 }
 
-async function savePrescriptionInTransaction(conn, visit, items, actorUserId) {
+async function savePrescriptionInTransaction(conn, visit, items, actorUserId, rxNotes = null) {
   if (!items.length) throw new AppError('Add at least one medicine to the prescription', 422);
 
   const [[current]] = await conn.execute(
@@ -138,9 +139,9 @@ async function savePrescriptionInTransaction(conn, visit, items, actorUserId) {
 
   const [result] = await conn.execute(
     `INSERT INTO prescriptions
-      (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value,
+      (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value, rx_notes,
        amended_from_id, amendment_reason, created_by)
-     VALUES (:code, :visitId, :patientId, :doctorId, :version, 1, :barcode,
+     VALUES (:code, :visitId, :patientId, :doctorId, :version, 1, :barcode, :rxNotes,
              :amendedFrom, :reason, :createdBy)`,
     {
       code,
@@ -149,6 +150,7 @@ async function savePrescriptionInTransaction(conn, visit, items, actorUserId) {
       doctorId: visit.doctor_id,
       version,
       barcode: visit.health_id,
+      rxNotes: String(rxNotes || '').trim() || null,
       amendedFrom,
       reason: current ? 'Doctor updated consultation and prescription.' : null,
       createdBy: actorUserId
@@ -234,9 +236,9 @@ async function amendPrescription(prescriptionId, items, reason, actorUserId) {
 
     const [result] = await conn.execute(
       `INSERT INTO prescriptions
-        (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value,
+        (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value, rx_notes,
          amended_from_id, amendment_reason, created_by)
-       VALUES (:code, :visitId, :patientId, :doctorId, :version, 1, :barcode, :amendedFrom, :reason, :createdBy)`,
+       VALUES (:code, :visitId, :patientId, :doctorId, :version, 1, :barcode, :rxNotes, :amendedFrom, :reason, :createdBy)`,
       {
         code: original.prescription_code,
         visitId: original.visit_id,
@@ -244,6 +246,7 @@ async function amendPrescription(prescriptionId, items, reason, actorUserId) {
         doctorId: original.doctor_id,
         version: original.version + 1,
         barcode: original.barcode_value,
+        rxNotes: original.rx_notes || null,
         amendedFrom: prescriptionId,
         reason: reason.trim(),
         createdBy: actorUserId
