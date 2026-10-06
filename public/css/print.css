@@ -111,7 +111,7 @@ body.print-doc {
 .rx-rmp{min-width:230px;text-align:right;font-size:8.5px;line-height:1.35}
 .rx-rmp strong{display:block;font-size:12px}
 .rx-rmp span{display:block}
-.rx-health-barcode{width:118px;min-width:118px;text-align:center;align-self:flex-start;font-size:7px;line-height:1.15}
+.rx-health-barcode{display:block!important;width:118px;min-width:118px;text-align:center;align-self:flex-start;font-size:7px;line-height:1.15}
 .rx-health-barcode img{display:block;width:112px;height:32px;object-fit:contain;margin:0 auto 2px}
 .rx-health-barcode span{display:block;white-space:nowrap}
 @media print{
