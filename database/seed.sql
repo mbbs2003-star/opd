@@ -23,7 +23,8 @@ INSERT INTO roles (code, name) VALUES
   ('SUPER_ADMIN', 'Super Admin'),
   ('ADMIN', 'OPD Admin'),
   ('OPD_STAFF', 'OPD Staff / Receptionist'),
-  ('DOCTOR', 'Doctor')
+  ('DOCTOR', 'Doctor'),
+  ('AGENT', 'Agent')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 INSERT INTO permissions (code, description) VALUES
@@ -51,7 +52,13 @@ INSERT INTO permissions (code, description) VALUES
   ('user.manage', 'Manage users and roles'),
   ('report.view', 'View reports'),
   ('audit.view', 'View audit logs'),
-  ('settings.manage', 'Configure hospital settings')
+  ('settings.manage', 'Configure hospital settings'),
+  ('agent.portal', 'Access Agent Portal'),
+  ('agent.patient.create', 'Register patients from Agent Portal'),
+  ('agent.patient.view', 'View Agent Portal patient attribution'),
+  ('agent.appointment.create', 'Book OPD appointments from Agent Portal'),
+  ('agent.lab.create', 'Book diagnostic tests from Agent Portal'),
+  ('agent.referral.view', 'View referral-code tracking')
 ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Role -> permission mapping
@@ -78,6 +85,14 @@ SELECT r.id, p.id FROM roles r JOIN permissions p
                 'queue.manage','billing.create','billing.view','payment.record',
                 'discount.request','prescription.attachment.upload')
 WHERE r.code = 'OPD_STAFF'
+ON DUPLICATE KEY UPDATE role_id = role_id;
+
+-- AGENT: patient registration, OPD/test booking and referral tracking
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p
+  ON p.code IN ('agent.portal','agent.patient.create','agent.patient.view',
+                'agent.appointment.create','agent.lab.create','agent.referral.view')
+WHERE r.code = 'AGENT'
 ON DUPLICATE KEY UPDATE role_id = role_id;
 
 -- DOCTOR: clinical + own-scope only
