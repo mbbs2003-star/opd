@@ -144,16 +144,16 @@ async function savePrescriptionInTransaction(conn, visit, items, actorUserId, rx
      VALUES (:code, :visitId, :patientId, :doctorId, :version, 1, :barcode, :rxNotes,
              :amendedFrom, :reason, :createdBy)`,
     {
-      code,
-      visitId: visit.id,
-      patientId: visit.patient_id,
-      doctorId: visit.doctor_id,
-      version,
-      barcode: visit.health_id,
-      rxNotes: String(rxNotes || '').trim() || null,
-      amendedFrom,
+      code: code ?? null,
+      visitId: visit.id ?? null,
+      patientId: visit.patient_id ?? null,
+      doctorId: visit.doctor_id ?? null,
+      version: version ?? 1,
+      barcode: visit.health_id ?? null,
+      rxNotes: rxNotes == null ? null : (String(rxNotes).trim() || null),
+      amendedFrom: amendedFrom ?? null,
       reason: current ? 'Doctor updated consultation and prescription.' : null,
-      createdBy: actorUserId
+      createdBy: actorUserId ?? null
     }
   );
 
