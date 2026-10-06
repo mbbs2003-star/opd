@@ -33,7 +33,7 @@
                 <div class="modal-dialog"><form method="POST" action="/admin/users/<%= u.id %>/reset-password" class="modal-content">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <div class="modal-header"><h5 class="modal-title">Reset Password — <%= u.name %></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                  <div class="modal-body"><input type="text" name="newPassword" class="form-control" minlength="8" placeholder="New temporary password" required></div>
+                  <div class="modal-body"><input type="text" name="newPassword" class="form-control" minlength="12" placeholder="New temporary password (12+ chars)" required></div>
                   <div class="modal-footer"><button type="submit" class="btn btn-primary">Reset</button></div>
                 </form></div>
               </div>
@@ -76,7 +76,7 @@
           <% branches.forEach(function(b) { %><option value="<%= b.id %>"><%= b.name %></option><% }) %>
         </select>
       </div>
-      <div class="mb-2"><label class="form-label">Temporary Password</label><input type="text" name="temporaryPassword" class="form-control" minlength="8" required></div>
+      <div class="mb-2"><label class="form-label">Temporary Password</label><input type="text" name="temporaryPassword" class="form-control" minlength="12" required></div>
       <div class="mb-2">
         <label class="form-label">Roles</label>
         <% roles.forEach(function(r) { %>
