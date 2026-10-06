@@ -1,5 +1,5 @@
 <%
-  const isFinalized = visit.status === 'COMPLETED';
+  const isFinalized = visit.status === 'COMPLETED';\n  const canEdit = !isFinalized || editMode;
   const c = consultation || {};
   const hasPrescription = currentPrescriptions && currentPrescriptions.length > 0;
 %>
@@ -16,7 +16,7 @@
   </div>
   <div class="d-flex gap-2">
     <a href="/patients/<%= visit.health_id %>" class="btn btn-outline-secondary btn-sm">Full Profile</a>
-    <% if (!isFinalized) { %>
+    <% if (canEdit) { %>
       <form method="POST" action="/doctor/consultation/<%= visit.id %>/complete" data-confirm="Complete this consultation? The clinical record will be finalized and can no longer be edited.">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button class="btn btn-success btn-sm"><i class="bi bi-check2-all"></i> Complete Consultation</button>
@@ -25,8 +25,10 @@
   </div>
 </div>
 
-<% if (isFinalized) { %>
-  <div class="alert alert-secondary"><i class="bi bi-lock"></i> This consultation is finalized. The clinical record is read-only; corrections to the prescription must go through an amendment.</div>
+<% if (isFinalized && !editMode) { %>
+  <div class="alert alert-secondary d-flex justify-content-between align-items-center gap-2"><span><i class="bi bi-lock"></i> This consultation is finalized and read-only.</span><a href="/doctor/consultation/<%= visit.id %>/edit" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit Consultation</a></div>
+<% } else if (isFinalized && editMode) { %>
+  <div class="alert alert-warning"><i class="bi bi-pencil-square"></i> <strong>Edit mode:</strong> changes will create a new prescription version and will be recorded in the audit trail.</div>
 <% } %>
 
 <% if (String(visit.gender || '').toLowerCase() === 'female') { %>
@@ -115,7 +117,7 @@
           </div>
           <input type="hidden" name="complaints" id="complaintValue">
           <div id="complaintTags" class="d-flex flex-wrap gap-2 mb-2"></div>
-          <% if (!isFinalized) { %>
+          <% if (canEdit) { %>
             <div class="position-relative"><input type="text" id="complaintInput" class="form-control" autocomplete="off" placeholder="Type a chief complaint and press Enter..." aria-label="Chief complaint"><div id="complaintSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:20;display:none;max-height:220px;overflow:auto;"></div></div>
             <div class="small text-muted mt-1">Your saved complaint suggestions will appear here.</div>
           <% } %>
@@ -129,7 +131,7 @@
             <div class="col-md-4"><label class="form-label small">Sleep</label><select id="phSleep" class="form-select form-select-sm" <%= isFinalized ? 'disabled' : '' %>><option value="">Not recorded</option><option value="NORMAL">Normal</option><option value="DISTURBED">Disturbed</option><option value="INSOMNIA">Insomnia</option><option value="EXCESSIVE">Excessive</option><option value="OTHER">Other</option></select><input id="phSleepOther" class="form-control form-control-sm mt-1" placeholder="Enter sleep details" style="display:none" <%= isFinalized ? 'readonly' : '' %>></div>
             <div class="col-md-4"><label class="form-label small">Drinking / Alcohol</label><select id="phDrinking" class="form-select form-select-sm" <%= isFinalized ? 'disabled' : '' %>><option value="">Not recorded</option><option value="NO">No</option><option value="YES">Yes</option><option value="OCCASIONAL">Occasional</option><option value="OTHER">Other</option></select><input id="phDrinkingOther" class="form-control form-control-sm mt-1" placeholder="If yes, enter drinking details" style="display:none" <%= isFinalized ? 'readonly' : '' %>></div>
             <div class="col-md-4"><label class="form-label small">Bowel</label><select id="phBowel" class="form-select form-select-sm" <%= isFinalized ? 'disabled' : '' %>><option value="">Not recorded</option><option value="REGULAR">Regular</option><option value="CONSTIPATION">Constipation</option><option value="DIARRHEA">Diarrhea</option><option value="IRREGULAR">Irregular</option><option value="OTHER">Other</option></select><input id="phBowelOther" class="form-control form-control-sm mt-1" placeholder="Enter bowel details" style="display:none" <%= isFinalized ? 'readonly' : '' %>></div>
-            <div class="col-12"><div class="d-flex justify-content-between align-items-center"><label class="form-label small mb-1">Additional history</label><% if (!isFinalized) { %><button type="button" class="btn btn-sm btn-outline-secondary" id="addHistoryItem"><i class="bi bi-plus"></i> Add item</button><% } %></div><div id="customHistoryItems" class="row g-2"></div></div>
+            <div class="col-12"><div class="d-flex justify-content-between align-items-center"><label class="form-label small mb-1">Additional history</label><% if (canEdit) { %><button type="button" class="btn btn-sm btn-outline-secondary" id="addHistoryItem"><i class="bi bi-plus"></i> Add item</button><% } %></div><div id="customHistoryItems" class="row g-2"></div></div>
           </div>
         </div>
 
@@ -137,7 +139,7 @@
           <div class="d-flex justify-content-between align-items-center"><label class="form-label mb-1">Clinical Findings</label><span class="badge text-bg-light border">Press Enter to add</span></div>
           <input type="hidden" name="clinicalNotes" id="clinicalFindingsValue">
           <div id="clinicalFindingsTags" class="d-flex flex-wrap gap-2 mb-2"></div>
-          <% if (!isFinalized) { %><input type="text" id="clinicalFindingsInput" class="form-control" placeholder="Enter examination / clinical finding and press Enter..."><% } %>
+          <% if (canEdit) { %><input type="text" id="clinicalFindingsInput" class="form-control" placeholder="Enter examination / clinical finding and press Enter..."><% } %>
         </div>
 
         <h6 class="text-uppercase text-muted small mt-4 mb-2">Vitals <span class="badge text-bg-primary-subtle text-primary">Doctor editable</span></h6>
@@ -185,8 +187,8 @@
           <% if (hasPrescription) { %>
             <div class="d-flex align-items-center gap-2">
               <span class="badge text-bg-primary">Current v<%= currentPrescriptions[0].version %></span>
-              <% if (visit.status === 'COMPLETED') { %>
-                <a href="/prescriptions/<%= currentPrescriptions[0].id %>/edit" class="btn btn-sm btn-warning"><i class="bi bi-pencil-square"></i> Edit Prescription</a>
+              <% if (visit.status === 'COMPLETED' && !editMode) { %>
+                <a href="/doctor/consultation/<%= visit.id %>/edit" class="btn btn-sm btn-warning"><i class="bi bi-pencil-square"></i> Edit Consultation</a>
               <% } %>
             </div>
           <% } %>
@@ -198,7 +200,7 @@
             <tbody id="rxBody"></tbody>
           </table>
         </div>
-        <% if (!isFinalized) { %><button type="button" class="btn btn-sm btn-outline-secondary" id="addRowBtn"><i class="bi bi-plus-lg"></i> Add Medicine</button><% } %>
+        <% if (canEdit) { %><button type="button" class="btn btn-sm btn-outline-secondary" id="addRowBtn"><i class="bi bi-plus-lg"></i> Add Medicine</button><% } %>
         <div class="mt-3">
           <label class="form-label mb-1">Rx Notes</label>
           <textarea name="rxNotes" class="form-control" rows="2" maxlength="1000" placeholder="Additional prescription instructions / notes..." <%= isFinalized ? 'readonly' : '' %>><%= prescriptionNotes || '' %></textarea>
@@ -211,7 +213,7 @@
           </div>
         </div>
 
-        <% if (!isFinalized) { %>
+        <% if (canEdit) { %>
           <div class="text-end mt-4"><button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save2 me-1"></i> Save Consultation &amp; Prescription</button></div>
         <% } %>
       </div>
