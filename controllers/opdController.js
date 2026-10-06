@@ -419,10 +419,36 @@ async function printBlankPrescription(req, res, next) {
   try {
     const data = await opdService.getAppointment(req.params.id);
     if (!data) throw new AppError('Appointment not found', 404);
+
+    const [[doctor]] = await pool.execute(
+      `SELECT u.name AS doctor_name, d.qualification, d.professional_reg_number,
+              d.specialisation, d.address AS doctor_address, d.mobile AS doctor_mobile,
+              d.email AS doctor_email
+       FROM doctors d
+       JOIN users u ON u.id = d.user_id
+       WHERE d.id = :doctorId`,
+      { doctorId: data.appointment.doctor_id }
+    );
+
+    const [[branch]] = await pool.execute(
+      `SELECT name AS branch_name, address AS branch_address, phone AS branch_phone, email AS branch_email
+       FROM branches WHERE id = :branchId`,
+      { branchId: data.appointment.branch_id }
+    );
+
+    const barcodeService = require('../services/barcodeService');
+    const barcodeDataUri = await barcodeService.generateCode128DataUri(data.appointment.health_id);
+
+    const mode = ['full', 'preprinted'].includes(req.query.mode) ? req.query.mode : null;
+
     res.render('print/blank-prescription', {
       layout: 'layouts/blank',
       title: 'Blank Prescription',
-      appointment: data.appointment
+      appointment: data.appointment,
+      doctor: doctor || {},
+      branch: branch || {},
+      barcodeDataUri,
+      mode
     });
   } catch (err) {
     next(err);
