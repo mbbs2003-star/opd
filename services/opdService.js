@@ -53,14 +53,21 @@ async function generateToken(conn, dateStr) {
 async function bookAppointment(payload, actorUserId) {
   return withTransaction(async (conn) => {
     const { patientId, doctorId, branchId, departmentId, appointmentDate, slotTime, reason } = payload;
-    const obstetric = calculatePregnancy(payload.lmpDate, payload.pregnancyStatus, appointmentDate);
+    let obstetricStatus = ['PREGNANT', 'NOT_PREGNANT', 'UNKNOWN'].includes(payload.pregnancyStatus)
+      ? payload.pregnancyStatus
+      : 'UNKNOWN';
 
     const [[patient]] = await conn.execute(
-      'SELECT id, health_id, name, status FROM patients WHERE id = :id AND deleted_at IS NULL',
+      'SELECT id, health_id, name, gender, status FROM patients WHERE id = :id AND deleted_at IS NULL',
       { id: patientId }
     );
     if (!patient) throw new AppError('Patient not found', 404);
     if (patient.status === 'SUSPENDED') throw new AppError('This patient is suspended. Restore the patient before booking an appointment.', 409);
+    const isFemale = String(patient.gender || '').toLowerCase() === 'female';
+    if (!isFemale) obstetricStatus = 'UNKNOWN';
+    const obstetric = isFemale
+      ? calculatePregnancy(payload.lmpDate, obstetricStatus, appointmentDate)
+      : { status: 'UNKNOWN', weeks: null, days: null, edd: null };
 
     const [[doctor]] = await conn.execute(
       `SELECT id, consultation_fee, branch_id, department_id
@@ -106,10 +113,10 @@ async function bookAppointment(payload, actorUserId) {
         slotTime,
         token,
         reason: reason || null,
-        lmpDate: payload.lmpDate || null,
-        gravida: payload.gravida === '' ? null : (payload.gravida ?? null),
-        para: payload.para === '' ? null : (payload.para ?? null),
-        abortions: payload.abortions === '' ? null : (payload.abortions ?? null),
+        lmpDate: isFemale ? (payload.lmpDate || null) : null,
+        gravida: isFemale && obstetricStatus === 'PREGNANT' && payload.gravida !== '' ? Math.max(0, parseInt(payload.gravida, 10) || 0) : null,
+        para: isFemale && payload.para !== '' && payload.para != null ? Math.max(0, parseInt(payload.para, 10) || 0) : null,
+        abortions: isFemale && payload.abortions !== '' && payload.abortions != null ? Math.max(0, parseInt(payload.abortions, 10) || 0) : null,
         pregnancyStatus: obstetric.status,
         gaWeeks: obstetric.weeks,
         gaDays: obstetric.days,
