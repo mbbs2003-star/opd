@@ -42,6 +42,12 @@
       <% if (prescription.doctor_address) { %><span><%= prescription.doctor_address %></span><% } %>
       <% if (prescription.doctor_mobile || prescription.doctor_email) { %><span><%= [prescription.doctor_mobile, prescription.doctor_email].filter(Boolean).join(' · ') %></span><% } %>
     </div>
+    <% if (barcodeDataUri && prescription.health_id) { %>
+      <div class="rx-health-barcode" aria-label="Patient Health ID barcode">
+        <img src="<%= barcodeDataUri %>" alt="Health ID barcode">
+        <span>Health ID: <strong><%= prescription.health_id %></strong></span>
+      </div>
+    <% } %>
   </div>
 
   <div class="rx-patient-bar">
