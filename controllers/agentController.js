@@ -32,6 +32,15 @@ async function newPatient(req,res,next){
 
 async function createPatient(req,res,next){
   try {
+    const name=String(req.body.name||'').trim();
+    const mobile=String(req.body.mobile||'').trim();
+    const gender=String(req.body.gender||'').trim();
+    if(!name || !gender || !mobile || !req.body.referralCode){
+      throw new AppError('Patient name, gender, mobile number and referral number are required.',422);
+    }
+    if(!/^[6-9]\d{9}$/.test(mobile)){
+      throw new AppError('Enter a valid 10-digit Indian mobile number.',422);
+    }
     const result=await agentService.registerPatient(req.body,req.user.id,branchId(req));
     req.flash('success',`Patient registered successfully. Health ID: ${result.healthId}`);
     res.redirect('/agent/patients?registered='+encodeURIComponent(result.healthId));
@@ -52,6 +61,9 @@ async function opdForm(req,res,next){
 
 async function bookOpd(req,res,next){
   try {
+    if (!req.body.healthId || !req.body.doctorId || !req.body.departmentId || !req.body.appointmentDate || !req.body.slotTime || !req.body.referralCode) {
+      throw new AppError('Health ID, referral number, department, doctor, date and slot time are required.',422);
+    }
     const bid=branchId(req);
     const patient=await agentService.getPatient(req.body.healthId,bid);
     if(!patient) throw new AppError('Patient not found in this branch. Search by Health ID and select a valid patient.',404);
@@ -69,7 +81,7 @@ async function bookOpd(req,res,next){
       abortions:req.body.abortions,
       pregnancyStatus:req.body.pregnancyStatus,
       obstetricNotes:req.body.obstetricNotes,
-      referralCode:agentService.referralCode(req.body.referralCode,req.user.id)
+      referralCode:agentService.requireReferralCode(req.body.referralCode,req.user.id)
     },req.user.id);
     req.flash('success',`OPD booked for ${patient.name}. Token ${String(result.token).padStart(3,'0')} — ${result.appointmentCode}`);
     res.redirect('/agent/patients');
@@ -90,6 +102,9 @@ async function testForm(req,res,next){
 
 async function bookTest(req,res,next){
   try {
+    if (!req.body.healthId || !req.body.referralCode) {
+      throw new AppError('Health ID and referral number are required.',422);
+    }
     const bid=branchId(req);
     const patient=await agentService.getPatient(req.body.healthId,bid);
     if(!patient) throw new AppError('Patient not found in this branch. Search by Health ID.',404);
@@ -101,7 +116,7 @@ async function bookTest(req,res,next){
       bookingDate:req.body.bookingDate,
       priority:req.body.priority||'ROUTINE',
       clinicalNotes:req.body.clinicalNotes,
-      referralCode:agentService.referralCode(req.body.referralCode,req.user.id)
+      referralCode:agentService.requireReferralCode(req.body.referralCode,req.user.id)
     });
     req.flash('success',`Diagnostic booking ${result.orderCode} created for ${patient.name}.`);
     res.redirect('/agent/patients');
