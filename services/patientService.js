@@ -179,10 +179,11 @@ async function searchPatients({ q, limit = 10 }) {
 
   const baseSql = `
     SELECT p.id, p.health_id, p.registration_number, p.name, p.gender, p.age_years, p.mobile,
-           p.aadhaar_last4, pa.district,
+           p.aadhaar_last4, p.referral_code, rp.provider_name AS referral_provider_name, pa.district,
            (SELECT MAX(v.checked_in_at) FROM opd_visits v WHERE v.patient_id = p.id) AS last_visit
     FROM patients p
     LEFT JOIN patient_addresses pa ON pa.patient_id = p.id
+    LEFT JOIN referral_providers rp ON rp.id=p.referral_provider_id
     WHERE p.deleted_at IS NULL
       AND (
         p.health_id = :exact
