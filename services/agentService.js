@@ -52,13 +52,14 @@ async function patientList(agentId, branchId, q = '') {
     params.exact = String(q).trim();
   }
   const [rows] = await pool.execute(
-    `SELECT p.id,p.health_id,p.registration_number,p.name,p.gender,p.age_years,p.mobile,p.referral_code,p.created_at,
+    `SELECT p.id,p.health_id,p.registration_number,p.name,p.gender,p.age_years,p.mobile,p.referral_code,rp.provider_name AS referral_provider_name,p.created_at,
        creator.name AS registered_by,
        (SELECT GROUP_CONCAT(DISTINCT r.code ORDER BY r.code SEPARATOR ', ') FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=creator.id) AS registered_by_role,
        (SELECT u2.name FROM appointments a2 JOIN users u2 ON u2.id=a2.created_by WHERE a2.patient_id=p.id ORDER BY a2.created_at DESC LIMIT 1) AS latest_booked_by,
        (SELECT (SELECT GROUP_CONCAT(DISTINCT r2.code ORDER BY r2.code SEPARATOR ', ') FROM user_roles ur2 JOIN roles r2 ON r2.id=ur2.role_id WHERE ur2.user_id=a2.created_by) FROM appointments a2 WHERE a2.patient_id=p.id ORDER BY a2.created_at DESC LIMIT 1) AS latest_booked_by_role,
        (SELECT a3.referral_code FROM appointments a3 WHERE a3.patient_id=p.id ORDER BY a3.created_at DESC LIMIT 1) AS latest_opd_referral
      FROM patients p
+     LEFT JOIN referral_providers rp ON rp.id=p.referral_provider_id
      LEFT JOIN users creator ON creator.id=p.created_by
      WHERE ${where.join(' AND ')}
      ORDER BY p.created_at DESC LIMIT 250`,
