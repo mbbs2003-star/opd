@@ -48,6 +48,8 @@ async function getTest(testId) {
 
 async function createTest(branchId,payload,actorUserId) {
   return withTransaction(async conn=>{
+    const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
+    const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
     const lab=await getLaboratoryForBranch(branchId,conn);
     if(!lab) throw new AppError('No active laboratory/diagnostic centre is configured',409);
     if(!payload.code || !payload.name) throw new AppError('Test code and test name are required',422);
