@@ -107,7 +107,8 @@ async function consultation(req, res, next, forcedQuery = null) {
       ...context,
       medicines,
       formOptions: formOptions.map(x => x.value),
-      routeOptions: routeOptions.map(x => x.value)
+      routeOptions: routeOptions.map(x => x.value),
+      editMode
     });
   } catch (err) {
     next(err);
