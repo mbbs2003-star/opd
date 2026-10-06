@@ -2,13 +2,13 @@
 <form method="POST" action="/patients/new" class="card shadow-sm"><input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>"><div class="card-body"><div class="row g-3">
 <div class="col-md-6"><label class="form-label">Full Name *</label><input class="form-control" name="name" required value="<%= typeof formData !== 'undefined' && formData.name ? formData.name : '' %>"></div>
 <div class="col-md-3"><label class="form-label">Gender *</label><select class="form-select" name="gender" required><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
-<div class="col-md-3"><label class="form-label">Date of Birth</label><input class="form-control" type="date" name="dob"></div>
+<div class="col-md-3"><label class="form-label">Date of Birth</label><input class="form-control" type="date" name="dob" id="patientDob"></div>
 <div class="col-md-6"><label class="form-label">Father / Husband Name</label><input class="form-control" name="fatherName"></div>
 <div class="col-md-6"><label class="form-label">Mobile *</label><input class="form-control" name="mobile" required value="<%= typeof prefillMobile !== 'undefined' ? prefillMobile : '' %>"></div>
 <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" type="email" name="email"></div>
 <div class="col-md-6"><label class="form-label">Aadhaar</label><input class="form-control" name="aadhaar" inputmode="numeric" maxlength="12"></div>
 <div class="col-md-4"><label class="form-label">Branch *</label><select class="form-select" name="branchId" required><option value="">Select branch</option><% (branches || []).forEach(b => { %><option value="<%= b.id %>"><%= b.code %> — <%= b.name %></option><% }) %></select></div>
-<div class="col-md-4"><label class="form-label">Age (years)</label><input class="form-control" type="number" name="ageYears" min="0" max="130"></div>
+<div class="col-md-4"><label class="form-label">Age (years)</label><input class="form-control bg-light" type="number" name="ageYears" id="patientAgeYears" min="0" max="130" readonly><div class="form-text">Calculated automatically from DOB.</div></div>
 <div class="col-md-4"><label class="form-label">Alternate Mobile</label><input class="form-control" name="altMobile"></div>
 <div class="col-12"><hr><h5>Address</h5></div>
 <div class="col-md-6"><label class="form-label">Address</label><input class="form-control" name="address"></div><div class="col-md-6"><label class="form-label">Village / Town</label><input class="form-control" name="villageTown"></div>
@@ -16,3 +16,30 @@
 <div class="col-12"><hr><h5>Medical Profile</h5></div><div class="col-md-3"><label class="form-label">Blood Group</label><input class="form-control" name="bloodGroup"></div><div class="col-md-3"><label class="form-label">Height (cm)</label><input class="form-control" name="heightCm"></div><div class="col-md-3"><label class="form-label">Weight (kg)</label><input class="form-control" name="weightKg"></div><div class="col-md-3"><label class="form-label">Emergency Contact</label><input class="form-control" name="emergencyContact"></div>
 <div class="col-md-6"><label class="form-label">Allergies</label><textarea class="form-control" name="allergies" rows="2"></textarea></div><div class="col-md-6"><label class="form-label">Existing Conditions</label><textarea class="form-control" name="existingConditions" rows="2"></textarea></div>
 </div></div><div class="card-footer d-flex justify-content-end gap-2"><a href="/patients" class="btn btn-light">Cancel</a><button class="btn btn-primary">Register Patient</button></div></form>
+<script>
+(function () {
+  const dob = document.getElementById('patientDob');
+  const age = document.getElementById('patientAgeYears');
+  if (!dob || !age) return;
+  function calculateAge() {
+    if (!dob.value) { age.value = ''; return; }
+    const m = dob.value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) { age.value = ''; return; }
+    const birth = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    const today = new Date();
+    const now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (birth.getFullYear() !== Number(m[1]) || birth.getMonth() !== Number(m[2]) - 1 ||
+        birth.getDate() !== Number(m[3]) || birth > now) {
+      age.value = '';
+      return;
+    }
+    let years = now.getFullYear() - birth.getFullYear();
+    if (now.getMonth() < birth.getMonth() ||
+        (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) years--;
+    age.value = Math.max(0, years);
+  }
+  dob.addEventListener('input', calculateAge);
+  dob.addEventListener('change', calculateAge);
+  calculateAge();
+})();
+</script>

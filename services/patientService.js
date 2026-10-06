@@ -6,6 +6,22 @@ const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
 const labService = require('./labService');
 
+function calculateAgeYears(dobValue, asOf = new Date()) {
+  if (!dobValue) return null;
+  const m = String(dobValue).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const year = Number(m[1]), month = Number(m[2]), day = Number(m[3]);
+  const dob = new Date(year, month - 1, day);
+  if (dob.getFullYear() !== year || dob.getMonth() !== month - 1 || dob.getDate() !== day) return null;
+  const today = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
+  if (dob > today) return null;
+  let age = today.getFullYear() - year;
+  const birthdayPassed = today.getMonth() > month - 1 ||
+    (today.getMonth() === month - 1 && today.getDate() >= day);
+  if (!birthdayPassed) age--;
+  return Math.max(0, age);
+}
+
 /** Registration Number format: REG-YY-BB-NNNNNN */
 async function generateRegistrationNumber(conn, branchCode, at = new Date()) {
   const yy = String(at.getFullYear()).slice(-2);
@@ -33,6 +49,10 @@ async function registerPatient(payload, actorUserId) {
 
         const healthId = await healthIdService.generateHealthId(conn, branch.code);
         const registrationNumber = await generateRegistrationNumber(conn, branch.code);
+        const calculatedAgeYears = calculateAgeYears(payload.dob);
+        if (payload.dob && calculatedAgeYears === null) {
+          throw new AppError('Invalid date of birth. Please enter a valid DOB that is not in the future.', 422);
+        }
 
         let aadhaarEncrypted = null;
         let aadhaarIv = null;
@@ -74,7 +94,7 @@ async function registerPatient(payload, actorUserId) {
             husbandName: payload.husbandName || null,
             gender: payload.gender,
             dob: payload.dob || null,
-            ageYears: payload.ageYears || null,
+            ageYears: calculatedAgeYears,
             mobile: payload.mobile,
             altMobile: payload.altMobile || null,
             email: payload.email ? payload.email.trim().toLowerCase() : null,

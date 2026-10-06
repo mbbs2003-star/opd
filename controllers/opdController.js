@@ -357,15 +357,19 @@ async function saveVitals(req, res, next) {
       const status = ['PREGNANT', 'NOT_PREGNANT', 'UNKNOWN'].includes(req.body.pregnancyStatus)
         ? req.body.pregnancyStatus
         : 'UNKNOWN';
-      const gravida = req.body.gravida === '' ? null : Math.max(0, parseInt(req.body.gravida, 10) || 0);
+      // Gravida is clinically relevant here only for a confirmed pregnancy.
+      // Do not persist stale G values when the patient is not pregnant.
+      const gravida = status === 'PREGNANT' && req.body.gravida !== ''
+        ? Math.max(0, parseInt(req.body.gravida, 10) || 0)
+        : null;
       const para = req.body.para === '' ? null : Math.max(0, parseInt(req.body.para, 10) || 0);
       const abortions = req.body.abortions === '' ? null : Math.max(0, parseInt(req.body.abortions, 10) || 0);
       const lmpDate = req.body.lmpDate || null;
 
       const { calculatePregnancy } = require('../utils/pregnancyCalculator');
-      const calculation = status === 'PREGNANT' && lmpDate ? calculatePregnancy(lmpDate) : null;
+      const calculation = status === 'PREGNANT' ? calculatePregnancy(lmpDate) : null;
       if (status === 'PREGNANT' && !calculation) {
-        throw new AppError('Please enter a valid LMP date before marking the patient as pregnant.', 400);
+        throw new AppError('Invalid pregnancy input: please enter a valid LMP date that is not in the future.', 400);
       }
 
       await pool.execute(

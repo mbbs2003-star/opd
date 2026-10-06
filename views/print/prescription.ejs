@@ -33,7 +33,7 @@
   <div class="rx-preprinted-letterhead-space" aria-label="Reserved space for pre-printed hospital letterhead"></div>
 
   <div class="rx-patient-bar">
-    <div><strong><%= prescription.patient_name %></strong><span><%= prescription.age_years || '—' %> yrs</span><span><%= prescription.gender || '—' %></span></div>
+    <div><strong>Patient Name: <%= prescription.patient_name %></strong><span><%= prescription.age_years || '—' %> yrs</span><span><%= prescription.gender || '—' %></span></div>
     <div><span>Health ID: <strong><%= prescription.health_id %></strong></span><% if (prescription.mobile) { %><span>Mob: <%= prescription.mobile %></span><% } %></div>
     <div><span>Date/Time: <strong><%= new Date(prescription.created_at).toLocaleString('en-IN') %></strong></span><span>Rx: <strong><%= prescription.prescription_code %></strong></span></div>
     <% if (barcodeDataUri && prescription.health_id) { %>

@@ -297,10 +297,29 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     }
 
     // Doctor may correct pregnancy/obstetric information when the female
-    // obstetric section is present. Other visits keep existing appointment data.
+    // obstetric section is present. LMP is the source of truth for pregnancy
+    // calculations; manually entered GA/EDD values are never trusted.
     if (payload.pregnancyStatus !== undefined || payload.lmpDate !== undefined || payload.gravida !== undefined ||
         payload.para !== undefined || payload.abortions !== undefined || payload.gestationalAgeWeeks !== undefined ||
         payload.gestationalAgeDays !== undefined || payload.estimatedDueDate !== undefined || payload.obstetricNotes !== undefined) {
+      const pregnancyStatus = payload.pregnancyStatus || null;
+
+      if (pregnancyStatus === 'PREGNANT') {
+        const { calculatePregnancy } = require('../utils/pregnancyCalculator');
+        const calculation = calculatePregnancy(payload.lmpDate);
+        if (!calculation) {
+          throw new AppError('Invalid pregnancy input: please enter a valid LMP date that is not in the future.', 400);
+        }
+        payload.gestationalAgeWeeks = calculation.gestationalAgeWeeks;
+        payload.gestationalAgeDays = calculation.gestationalAgeDays;
+        payload.estimatedDueDate = calculation.estimatedDueDate;
+      } else {
+        payload.gravida = null;
+        payload.gestationalAgeWeeks = null;
+        payload.gestationalAgeDays = null;
+        payload.estimatedDueDate = null;
+      }
+
       await conn.execute(
         `UPDATE appointments SET
            lmp_date = :lmpDate,
@@ -316,10 +335,12 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
         {
           appointmentId: visit.appointment_id,
           lmpDate: payload.lmpDate || null,
-          gravida: payload.gravida === '' || payload.gravida == null ? null : Number(payload.gravida),
-          para: payload.para === '' || payload.para == null ? null : Number(payload.para),
-          abortions: payload.abortions === '' || payload.abortions == null ? null : Number(payload.abortions),
-          pregnancyStatus: payload.pregnancyStatus || null,
+          gravida: pregnancyStatus === 'PREGNANT' && payload.gravida !== '' && payload.gravida != null
+            ? Math.max(0, Number(payload.gravida))
+            : null,
+          para: payload.para === '' || payload.para == null ? null : Math.max(0, Number(payload.para)),
+          abortions: payload.abortions === '' || payload.abortions == null ? null : Math.max(0, Number(payload.abortions)),
+          pregnancyStatus,
           gestationalWeeks: payload.gestationalAgeWeeks === '' || payload.gestationalAgeWeeks == null ? null : Number(payload.gestationalAgeWeeks),
           gestationalDays: payload.gestationalAgeDays === '' || payload.gestationalAgeDays == null ? null : Number(payload.gestationalAgeDays),
           estimatedDueDate: payload.estimatedDueDate || null,
