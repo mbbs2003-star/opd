@@ -84,7 +84,7 @@ async function registerPatient(payload, actorUserId) {
              mobile, alt_mobile, email, aadhaar_encrypted, aadhaar_iv, aadhaar_hash, aadhaar_last4, created_by)
            VALUES
             (:healthId, :registrationNumber, :branchId, :name, :fatherName, :husbandName, :gender, :dob, :ageYears,
-             :mobile, :altMobile, :email, :aadhaarEncrypted, :aadhaarIv, :aadhaarHash, :aadhaarLast4, :createdBy)`,
+             :mobile, :altMobile, :email, :aadhaarEncrypted, :aadhaarIv, :aadhaarHash, :aadhaarLast4, :createdBy, :referralCode)`,
           {
             healthId,
             registrationNumber,
@@ -102,7 +102,8 @@ async function registerPatient(payload, actorUserId) {
             aadhaarIv,
             aadhaarHash,
             aadhaarLast4,
-            createdBy: actorUserId
+            createdBy: actorUserId,
+            referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null
           }
         );
         const patientId = result.insertId;
