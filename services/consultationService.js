@@ -194,7 +194,14 @@ async function getConsultationContext(visitId) {
  */
 async function saveConsultation(visitId, payload, actorUserId, prescriptionItems = []) {
   return withTransaction(async (conn) => {
-    const [[visit]] = await conn.execute('SELECT * FROM opd_visits WHERE id = :id FOR UPDATE', { id: visitId });
+    const [[visit]] = await conn.execute(
+      `SELECT v.*, p.health_id
+       FROM opd_visits v
+       JOIN patients p ON p.id = v.patient_id
+       WHERE v.id = :id
+       FOR UPDATE`,
+      { id: visitId }
+    );
     if (!visit) throw new AppError('Visit not found', 404);
     if (visit.status === 'CANCELLED') throw new AppError('This visit was cancelled', 409);
 
