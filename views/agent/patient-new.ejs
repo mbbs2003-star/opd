@@ -13,5 +13,5 @@
 <div class="col-md-6"><label class="form-label">Village / Town</label><input name="villageTown" class="form-control"></div>
 <div class="col-md-6"><label class="form-label">Police Station</label><input name="policeStation" class="form-control"></div>
 <div class="col-md-6"><label class="form-label">State</label><input name="state" class="form-control" value="West Bengal"></div>
-<div class="col-md-6"><label class="form-label">Referral Number / Code *</label><input name="referralCode" class="form-control" value="<%= referralCode %>" required><div class="form-text">Use the referral number supplied for this patient.</div></div>
+<div class="col-md-6"><label class="form-label">Referral Provider / Code *</label><select name="referralCode" class="form-select" required><option value="">Select referral provider</option><% referralProviders.forEach(function(r){ %><option value="<%= r.referral_code %>" <%= selectedReferralCode===r.referral_code ? "selected" : "" %>><%= r.provider_name %> — <%= r.referral_code %><%= r.provider_type ? " · "+r.provider_type : "" %></option><% }) %></select><div class="form-text">Only active referral codes configured by Super Admin are available.</div></div>
 </div></div><div class="card-footer text-end"><button class="btn btn-primary">Register Patient</button></div></div></form>
