@@ -97,7 +97,7 @@ async function bookTest(req,res,next){
     const labService=require('../services/labService');
     const result=await labService.createOrder(patient.id,bid,req.user.id,{
       testIds,
-      source:'RECEPTION',
+      source:'AGENT',
       bookingDate:req.body.bookingDate,
       priority:req.body.priority||'ROUTINE',
       clinicalNotes:req.body.clinicalNotes,
