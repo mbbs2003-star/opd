@@ -65,6 +65,31 @@ async function view(req, res, next) {
   }
 }
 
+async function edit(req, res, next) {
+  try {
+    await prescriptionService.assertCanAmend(req.params.id, req.user);
+    const data = await prescriptionService.getPrescription(req.params.id);
+    if (!data) throw new AppError('Prescription not found', 404);
+    if (!data.prescription.is_current) throw new AppError('Only the current prescription can be edited.', 409);
+
+    const [medicines] = await pool.execute(
+      'SELECT id, name, strength, composition, form FROM medicines WHERE is_active = 1 ORDER BY name LIMIT 500'
+    );
+
+    res.render('prescriptions/edit', {
+      title: `Edit Prescription ${data.prescription.prescription_code}`,
+      ...data,
+      medicines
+    });
+  } catch (err) {
+    if (err instanceof AppError) {
+      req.flash('errors', [{ message: err.message }]);
+      return res.redirect(`/prescriptions/${req.params.id}`);
+    }
+    next(err);
+  }
+}
+
 async function amend(req, res, next) {
   try {
     await prescriptionService.assertCanAmend(req.params.id, req.user);
@@ -208,4 +233,4 @@ async function downloadHardCopy(req, res, next) {
   }
 }
 
-module.exports = { create, view, amend, print, scanLookup, uploadHardCopy, downloadHardCopy };
+module.exports = { create, view, edit, amend, print, scanLookup, uploadHardCopy, downloadHardCopy };
