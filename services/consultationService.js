@@ -301,6 +301,26 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
     if (payload.pregnancyStatus !== undefined || payload.lmpDate !== undefined || payload.gravida !== undefined ||
         payload.para !== undefined || payload.abortions !== undefined || payload.gestationalAgeWeeks !== undefined ||
         payload.gestationalAgeDays !== undefined || payload.estimatedDueDate !== undefined || payload.obstetricNotes !== undefined) {
+      const pregnancyStatus = payload.pregnancyStatus || null;
+      if (pregnancyStatus === 'PREGNANT') {
+        const { calculatePregnancy } = require('../utils/pregnancyCalculator');
+        const calculation = calculatePregnancy(payload.lmpDate);
+        if (!calculation) {
+          throw new AppError('Invalid pregnancy input: please enter a valid LMP date that is not in the future.', 400);
+        }
+        // LMP is authoritative: never trust manually entered gestational age/EDD.
+        payload.gestationalAgeWeeks = calculation.gestationalAgeWeeks;
+        payload.gestationalAgeDays = calculation.gestationalAgeDays;
+        payload.estimatedDueDate = calculation.estimatedDueDate;
+      } else {
+        payload.gravida = null;
+        payload.gestationalAgeWeeks = null;
+        payload.gestationalAgeDays = null;
+        payload.estimatedDueDate = null;
+      }
+
+        payload.para !== undefined || payload.abortions !== undefined || payload.gestationalAgeWeeks !== undefined ||
+        payload.gestationalAgeDays !== undefined || payload.estimatedDueDate !== undefined || payload.obstetricNotes !== undefined) {
       await conn.execute(
         `UPDATE appointments SET
            lmp_date = :lmpDate,
@@ -316,9 +336,11 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
         {
           appointmentId: visit.appointment_id,
           lmpDate: payload.lmpDate || null,
-          gravida: payload.gravida === '' || payload.gravida == null ? null : Number(payload.gravida),
-          para: payload.para === '' || payload.para == null ? null : Number(payload.para),
-          abortions: payload.abortions === '' || payload.abortions == null ? null : Number(payload.abortions),
+          gravida: String(payload.pregnancyStatus || '') === 'PREGNANT' && payload.gravida !== '' && payload.gravida != null
+            ? Math.max(0, Number(payload.gravida))
+            : null,
+          para: payload.para === '' || payload.para == null ? null : Math.max(0, Number(payload.para)),
+          abortions: payload.abortions === '' || payload.abortions == null ? null : Math.max(0, Number(payload.abortions)),
           pregnancyStatus: payload.pregnancyStatus || null,
           gestationalWeeks: payload.gestationalAgeWeeks === '' || payload.gestationalAgeWeeks == null ? null : Number(payload.gestationalAgeWeeks),
           gestationalDays: payload.gestationalAgeDays === '' || payload.gestationalAgeDays == null ? null : Number(payload.gestationalAgeDays),
