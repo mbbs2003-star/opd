@@ -33,12 +33,21 @@ async function issueOtp(purpose, email, payload = null) {
     { purpose, email: normalized, otpHash, payload: payload ? JSON.stringify(payload) : null }
   );
 
-  await emailService.sendMail({
+  const result = await emailService.sendMail({
     to: normalized,
     subject: 'Chhayabithi HMS — Your verification code',
     html: `<p>Your Chhayabithi HMS verification code is <strong style="font-size:24px;letter-spacing:4px;">${otp}</strong>.</p><p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>`,
     text: `Your Chhayabithi HMS verification code is ${otp}. It expires in 10 minutes.`
   });
+
+  if (!result.sent) {
+    throw new AppError(
+      result.reason === 'smtp_disabled'
+        ? 'Email service is not configured. Please contact the hospital administrator.'
+        : 'We could not send the verification email. Please try again in a moment.',
+      503
+    );
+  }
 
   return { sent: true };
 }

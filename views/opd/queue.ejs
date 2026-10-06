@@ -94,6 +94,7 @@
                   <a href="/billing/invoices/<%= r.invoice_id %>" class="btn btn-sm btn-danger"><i class="bi bi-cash-coin"></i> Collect Bill</a>
                 <% } %>
                 <a href="/opd/visits/<%= r.visit_id %>/vitals" class="btn btn-sm btn-outline-info"><i class="bi bi-heart-pulse"></i> Vitals</a>
+                <a href="/opd/appointments/<%= r.appointment_id %>/blank-prescription" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-medical"></i> Blank Prescription</a>
                 <% if (r.visit_status === 'WAITING') { %>
                   <form method="POST" action="/opd/visits/<%= r.visit_id %>/reorder"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="direction" value="UP"><button class="btn btn-sm btn-outline-secondary" title="Move up">↑</button></form>
                   <form method="POST" action="/opd/visits/<%= r.visit_id %>/reorder"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="direction" value="DOWN"><button class="btn btn-sm btn-outline-secondary" title="Move down">↓</button></form>

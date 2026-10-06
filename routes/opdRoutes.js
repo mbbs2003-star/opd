@@ -45,6 +45,7 @@ router.post('/appointments/:id/edit', requirePermission('appointment.reschedule'
 router.get('/appointments/:id', requirePermission('appointment.create', 'queue.manage'), asyncHandler(opdController.viewAppointment));
 router.get('/appointments/:id/barcode', requirePermission('appointment.create', 'patient.view'), asyncHandler(opdController.appointmentBarcode));
 router.get('/appointments/:id/token', requirePermission('appointment.create', 'queue.manage'), asyncHandler(opdController.printToken));
+router.get('/appointments/:id/blank-prescription', requirePermission('appointment.create', 'queue.manage'), asyncHandler(opdController.printBlankPrescription));
 
 router.post(
   '/appointments/:id/reschedule',

@@ -155,3 +155,34 @@ body.print-doc {
   .prescription-one-page .print-actions{display:none!important}
   body.print-doc{font-size:10.5px}
 }
+
+/* Blank prescription issued by reception: pre-printed hospital letterhead only. */
+.blank-prescription-sheet{
+  min-height:calc(297mm - 24mm);
+  box-sizing:border-box;
+}
+.blank-prescription-letterhead{
+  width:100%;
+}
+.blank-prescription-sheet .print-header{
+  padding-top:2px;
+}
+
+/* Doctor prescription is printed on pre-printed hospital stationery. */
+.rx-preprinted-letterhead-space{
+  height:36mm;
+  min-height:36mm;
+  width:100%;
+}
+@media print{
+  .blank-prescription-sheet{
+    min-height:calc(297mm - 24mm);
+    height:calc(297mm - 24mm);
+    padding:0;
+    margin:0;
+  }
+  .rx-preprinted-letterhead-space{
+    height:36mm;
+    min-height:36mm;
+  }
+}
