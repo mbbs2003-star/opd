@@ -115,7 +115,7 @@ async function createPrescription(visitId, items, actorUserId) {
   });
 }
 
-async function savePrescriptionInTransaction(conn, visit, items, actorUserId) {
+async function savePrescriptionInTransaction(conn, visit, items, actorUserId, rxNotes = null) {
   if (!items.length) throw new AppError('Add at least one medicine to the prescription', 422);
 
   const [[current]] = await conn.execute(
