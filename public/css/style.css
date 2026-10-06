@@ -381,6 +381,15 @@ img, video, canvas { max-width: 100%; height: auto; }
 }
 
 
+.pregnancy-assessment-card{border-color:#b8dfe7!important;box-shadow:0 10px 30px rgba(13,110,110,.06)}
+.pregnancy-assessment-card .card-header{background:linear-gradient(135deg,#f1fbfb,#eaf7f4);border-bottom-color:#d6ebea}
+.pregnancy-calculator-result{padding:1rem;border-radius:.9rem;background:#eef9fb;border:1px solid #cfe8ec}
+.pregnancy-calculator-result .pregnancy-stat{height:100%;padding:.75rem;border-radius:.7rem;background:#fff;border:1px solid #d9ebee}
+.pregnancy-calculator-result .pregnancy-stat small{display:block;color:#6d7d7b;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em}
+.pregnancy-calculator-result .pregnancy-stat strong{display:block;color:#075f63;margin-top:.2rem;font-size:.95rem}
+.pregnancy-assessment-card [data-pregnancy-reference]{font-variant-numeric:tabular-nums}
+@media(max-width:767.98px){.pregnancy-assessment-card .btn,.pregnancy-assessment-card .form-select,.pregnancy-assessment-card .form-control{min-height:44px}}
+
 /* Doctor prescription route markers */
 .route-badge{display:inline-block;font-size:.68rem;font-weight:800;min-width:48px;text-align:center}
 .route-po{background:#e7f7ef!important;color:#137a4b!important}
