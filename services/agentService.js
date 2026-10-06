@@ -69,14 +69,14 @@ async function patientList(agentId, branchId, q = '') {
 
 async function referralStats(branchId) {
   const [rows] = await pool.execute(
-    `SELECT codes.referral_code,
+    `SELECT codes.referral_code, codes.provider_name,
        (SELECT COUNT(*) FROM patients p WHERE p.branch_id=:branchId AND p.referral_code=codes.referral_code AND p.deleted_at IS NULL) AS patients,
        (SELECT COUNT(*) FROM appointments a WHERE a.branch_id=:branchId AND a.referral_code=codes.referral_code AND a.status<>'CANCELLED') AS opd,
        (SELECT COUNT(*) FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id WHERE l.branch_id=:branchId AND o.referral_code=codes.referral_code AND o.status<>'CANCELLED') AS tests
      FROM (
-       SELECT DISTINCT referral_code FROM patients WHERE branch_id=:branchId AND referral_code IS NOT NULL AND referral_code<>''
-       UNION SELECT DISTINCT referral_code FROM appointments WHERE branch_id=:branchId AND referral_code IS NOT NULL AND referral_code<>''
-       UNION SELECT DISTINCT o.referral_code FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id WHERE l.branch_id=:branchId AND o.referral_code IS NOT NULL AND o.referral_code<>''
+       SELECT DISTINCT p.referral_code, rp.provider_name FROM patients p LEFT JOIN referral_providers rp ON rp.id=p.referral_provider_id WHERE p.branch_id=:branchId AND p.referral_code IS NOT NULL AND p.referral_code<>''
+       UNION SELECT DISTINCT a.referral_code, rp2.provider_name FROM appointments a LEFT JOIN referral_providers rp2 ON rp2.id=a.referral_provider_id WHERE a.branch_id=:branchId AND a.referral_code IS NOT NULL AND a.referral_code<>''
+       UNION SELECT DISTINCT o.referral_code, rp3.provider_name FROM lab_orders o JOIN laboratories l ON l.id=o.laboratory_id LEFT JOIN referral_providers rp3 ON rp3.id=o.referral_provider_id o JOIN laboratories l ON l.id=o.laboratory_id WHERE l.branch_id=:branchId AND o.referral_code IS NOT NULL AND o.referral_code<>''
      ) codes
      ORDER BY patients DESC, opd DESC, tests DESC, codes.referral_code`,
     { branchId }
