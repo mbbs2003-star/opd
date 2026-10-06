@@ -174,6 +174,7 @@ async function getConsultationContext(visitId) {
     previousPrescriptions,
     currentPrescriptions,
     currentPrescriptionItems,
+    prescriptionNotes: currentPrescriptions.length ? (await pool.execute('SELECT rx_notes FROM prescriptions WHERE id = :prescriptionId', { prescriptionId: currentPrescriptions[0].id }))[0][0]?.rx_notes || '' : '',
     invoice: invoice || null,
     pregnancyCalculation,
     complaintSuggestions,
@@ -368,7 +369,8 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
       conn,
       visit,
       prescriptionItems,
-      actorUserId
+      actorUserId,
+      payload.rxNotes
     );
 
     await labService.syncDoctorRequestedTests(
