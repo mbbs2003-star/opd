@@ -92,6 +92,9 @@
       <% if (can('user.manage')) { %><li class="nav-item"><a class="nav-link <%= active('/admin/users') %>" href="/admin/users"><i class="bi bi-people-fill"></i> Users</a></li><% } %>
       <% if (can('branch.manage')) { %><li class="nav-item"><a class="nav-link <%= active('/admin/branches') %>" href="/admin/branches"><i class="bi bi-diagram-3"></i> Branches</a></li><% } %>
       <% if (can('department.manage')) { %><li class="nav-item"><a class="nav-link <%= active('/admin/departments') %>" href="/admin/departments"><i class="bi bi-collection"></i> Departments</a></li><% } %>
+      <% if (currentUser && currentUser.roles && currentUser.roles.includes('SUPER_ADMIN')) { %>
+        <li class="nav-item"><a class="nav-link <%= active('/admin/referrals') %>" href="/admin/referrals"><i class="bi bi-share"></i> Referral Providers</a></li>
+      <% } %>
       <% if (can('audit.view')) { %><li class="nav-item"><a class="nav-link <%= active('/admin/audit-logs') %>" href="/admin/audit-logs"><i class="bi bi-journal-text"></i> Audit Logs</a></li><% } %>
       <% if (can('settings.manage')) { %><li class="nav-item"><a class="nav-link <%= active('/admin/settings') %>" href="/admin/settings"><i class="bi bi-gear"></i> Site Settings</a></li><% } %>
     <% } %>
