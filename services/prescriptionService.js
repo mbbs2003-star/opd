@@ -113,6 +113,66 @@ async function createPrescription(visitId, items, actorUserId) {
   });
 }
 
+async function savePrescriptionInTransaction(conn, visit, items, actorUserId) {
+  if (!items.length) throw new AppError('Add at least one medicine to the prescription', 422);
+
+  const [[current]] = await conn.execute(
+    'SELECT * FROM prescriptions WHERE visit_id = :visitId AND is_current = 1 FOR UPDATE',
+    { visitId: visit.id }
+  );
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  let code;
+  let version = 1;
+  let amendedFrom = null;
+
+  if (current) {
+    code = current.prescription_code;
+    version = Number(current.version) + 1;
+    amendedFrom = current.id;
+    await conn.execute('UPDATE prescriptions SET is_current = 0 WHERE id = :id', { id: current.id });
+  } else {
+    code = await generatePrescriptionCode(conn, dateStr);
+  }
+
+  const [result] = await conn.execute(
+    `INSERT INTO prescriptions
+      (prescription_code, visit_id, patient_id, doctor_id, version, is_current, barcode_value,
+       amended_from_id, amendment_reason, created_by)
+     VALUES (:code, :visitId, :patientId, :doctorId, :version, 1, :barcode,
+             :amendedFrom, :reason, :createdBy)`,
+    {
+      code,
+      visitId: visit.id,
+      patientId: visit.patient_id,
+      doctorId: visit.doctor_id,
+      version,
+      barcode: visit.health_id,
+      amendedFrom,
+      reason: current ? 'Doctor updated consultation and prescription.' : null,
+      createdBy: actorUserId
+    }
+  );
+
+  const prescriptionId = result.insertId;
+  await rememberPrescriptionOptions(conn, items, actorUserId);
+  await insertItems(conn, prescriptionId, items);
+
+  await auditService.log(
+    {
+      userId: actorUserId,
+      action: current ? 'PRESCRIPTION_UPDATED' : 'PRESCRIPTION_CREATED',
+      entity: 'prescription',
+      entityId: prescriptionId,
+      oldValue: current ? { id: current.id, version: current.version } : null,
+      newValue: { code, version, visitId: visit.id, itemCount: items.length }
+    },
+    conn
+  );
+
+  return { id: prescriptionId, code, version };
+}
+
 async function rememberPrescriptionOptions(conn, items, actorUserId) {
   for (const item of items) {
     for (const [optionType, value] of [['FORM', item.medicineForm], ['ROUTE', item.route]]) {
@@ -211,9 +271,9 @@ async function amendPrescription(prescriptionId, items, reason, actorUserId) {
 
 async function getPrescription(prescriptionId) {
   const [[prescription]] = await pool.execute(
-    `SELECT pr.*, p.health_id, p.name AS patient_name, p.age_years, p.gender, p.mobile,
+    `SELECT pr.*, p.health_id, p.name AS patient_name, p.age_years, p.gender, p.mobile, p.email, p.address,
             m.allergies,
-            u.name AS doctor_name, d.qualification, d.professional_reg_number, d.specialisation,
+            u.name AS doctor_name, d.qualification, d.professional_reg_number, d.specialisation, d.address AS doctor_address, d.mobile AS doctor_mobile, d.email AS doctor_email,
             dept.name AS department_name,
             c.diagnosis, c.investigation_advice, c.follow_up_date, c.complaints,
             c.symptoms, c.personal_history, c.clinical_notes,
@@ -227,7 +287,7 @@ async function getPrescription(prescriptionId) {
             COALESCE(av.weight_kg, vt.weight_kg) AS weight_kg,
             COALESCE(av.height_cm, vt.height_cm) AS height_cm,
             av.respiratory_rate,
-            v.visit_code, b.name AS branch_name
+            v.visit_code, b.name AS branch_name, b.address AS branch_address, b.phone AS branch_phone, b.email AS branch_email
      FROM prescriptions pr
      JOIN patients p ON p.id = pr.patient_id
      LEFT JOIN patient_medical_profiles m ON m.patient_id = p.id
@@ -272,6 +332,7 @@ async function assertCanAmend(prescriptionId, user) {
 
 module.exports = {
   createPrescription,
+  savePrescriptionInTransaction,
   amendPrescription,
   getPrescription,
   assertCanAmend,
