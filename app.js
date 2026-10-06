@@ -155,6 +155,7 @@ app.use('/auth', require('./routes/authRoutes'));
 app.use('/dashboard', require('./routes/dashboardRoutes'));
 app.use('/patients', require('./routes/patientRoutes'));
 app.use('/patient-portal', require('./routes/patientPortalRoutes'));
+app.use('/agent', require('./routes/agentRoutes'));
 app.use('/doctors', require('./routes/doctorRoutes'));
 app.use('/opd', require('./routes/opdRoutes'));
 app.use('/doctor', require('./routes/doctorPortalRoutes'));

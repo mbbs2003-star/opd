@@ -28,6 +28,13 @@
       <li class="nav-item"><a class="nav-link <%= active('/doctor') %>" href="/doctor/queue"><i class="bi bi-person-badge"></i> Doctor Portal</a></li>
     <% } %>
 
+    <% if (can('agent.portal')) { %>
+      <li class="nav-section">Agent</li>
+      <li class="nav-item"><a class="nav-link <%= active('/agent') %>" href="/agent"><i class="bi bi-person-workspace"></i> Agent Portal</a></li>
+      <li class="nav-item"><a class="nav-link <%= active('/agent/patients') %>" href="/agent/patients"><i class="bi bi-people"></i> Agent Patients</a></li>
+      <li class="nav-item"><a class="nav-link <%= active('/agent/referrals') %>" href="/agent/referrals"><i class="bi bi-share"></i> Referral Tracking</a></li>
+    <% } %>
+
     <% if (can('patient.create') || can('patient.view')) { %>
       <li class="nav-section">Patients</li>
       <% if (can('patient.create')) { %>
