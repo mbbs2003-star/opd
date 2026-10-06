@@ -1,5 +1,6 @@
 <%
-  const isFinalized = visit.status === 'COMPLETED';\n  const canEdit = !isFinalized || editMode;
+  const isFinalized = visit.status === 'COMPLETED';
+  const canEdit = !isFinalized || editMode;
   const c = consultation || {};
   const hasPrescription = currentPrescriptions && currentPrescriptions.length > 0;
 %>
@@ -354,7 +355,8 @@
     data.customItems=Array.from(custom.children).map(r=>({key:r.querySelector('.ph-key').value.trim(),value:r.querySelector('.ph-val').value.trim()})).filter(x=>x.key||x.value);
     historyValue.value=JSON.stringify(data);
   }
-  let findings=<%- JSON.stringify(String(c.clinical_notes || '').split(/[;\n]+/).map(x=>x.trim()).filter(Boolean)) %>;
+  let findings=<%- JSON.stringify(String(c.clinical_notes || '').split(/[;
+]+/).map(x=>x.trim()).filter(Boolean)) %>;
   function syncFindings(){findings=[...new Set(findings.map(x=>x.trim()).filter(Boolean))];if(clinicalValue)clinicalValue.value=findings.join('; ');if(clinicalTags)clinicalTags.innerHTML=findings.map((x,i)=>'<span class="badge rounded-pill text-bg-success d-inline-flex align-items-center gap-1">'+esc(x)+'<button type="button" class="btn-close btn-close-white btn-sm finding-remove" data-index="'+i+'"></button></span>').join('');}
   function addFinding(raw){const x=String(raw||'').trim().replace(/\s+/g,' ');if(!x||findings.some(c=>c.toLowerCase()===x.toLowerCase()))return;findings.push(x);syncFindings();}
   if(clinicalInput){clinicalInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFinding(clinicalInput.value);clinicalInput.value='';}});}
