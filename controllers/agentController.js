@@ -52,6 +52,9 @@ async function opdForm(req,res,next){
 
 async function bookOpd(req,res,next){
   try {
+    if (!req.body.healthId || !req.body.doctorId || !req.body.departmentId || !req.body.appointmentDate || !req.body.slotTime || !req.body.referralCode) {
+      throw new AppError('Health ID, referral number, department, doctor, date and slot time are required.',422);
+    }
     const bid=branchId(req);
     const patient=await agentService.getPatient(req.body.healthId,bid);
     if(!patient) throw new AppError('Patient not found in this branch. Search by Health ID and select a valid patient.',404);
@@ -90,6 +93,9 @@ async function testForm(req,res,next){
 
 async function bookTest(req,res,next){
   try {
+    if (!req.body.healthId || !req.body.referralCode) {
+      throw new AppError('Health ID and referral number are required.',422);
+    }
     const bid=branchId(req);
     const patient=await agentService.getPatient(req.body.healthId,bid);
     if(!patient) throw new AppError('Patient not found in this branch. Search by Health ID.',404);
