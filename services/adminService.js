@@ -173,7 +173,8 @@ async function ensureAgentRole() {
       ('agent.patient.view', 'View Agent Portal patient attribution'),
       ('agent.appointment.create', 'Book OPD appointments from Agent Portal'),
       ('agent.lab.create', 'Book diagnostic tests from Agent Portal'),
-      ('agent.referral.view', 'View referral-code tracking')
+      ('agent.referral.view', 'View referral-code tracking'),
+      ('patient.view', 'View patient profiles')
      ON DUPLICATE KEY UPDATE description = VALUES(description)`
   );
 
