@@ -415,6 +415,20 @@ async function printToken(req, res, next) {
   }
 }
 
+async function printBlankPrescription(req, res, next) {
+  try {
+    const data = await opdService.getAppointment(req.params.id);
+    if (!data) throw new AppError('Appointment not found', 404);
+    res.render('print/blank-prescription', {
+      layout: 'layouts/blank',
+      title: 'Blank Prescription',
+      appointment: data.appointment
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function appointmentBarcode(req, res, next) {
   try {
     const data = await opdService.getAppointment(req.params.id);
@@ -447,5 +461,6 @@ module.exports = { editAppointment, updateAppointmentDetails, reorderQueue, show
   updateVisitStatus,
   printToken,
   appointmentBarcode,
+  printBlankPrescription,
   liveBoard
 };
