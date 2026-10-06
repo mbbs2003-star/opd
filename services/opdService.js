@@ -3,17 +3,22 @@ const sequenceService = require('./sequenceService');
 const scheduleService = require('./scheduleService');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
+const { calculatePregnancy: calculatePregnancyFromLmp } = require('../utils/pregnancyCalculator');
 
 function calculatePregnancy(lmpDate, pregnancyStatus, asOfDate) {
   if (pregnancyStatus !== 'PREGNANT' || !lmpDate) {
     return { status: pregnancyStatus || 'UNKNOWN', weeks: null, days: null, edd: null };
   }
-  const lmp = new Date(lmpDate + 'T00:00:00Z');
-  const asOf = new Date((asOfDate || new Date().toISOString().slice(0,10)) + 'T00:00:00Z');
-  const diffDays = Math.max(0, Math.floor((asOf - lmp) / 86400000));
-  const eddDate = new Date(lmp.getTime() + 280 * 86400000);
-  const edd = eddDate.toISOString().slice(0,10);
-  return { status: 'PREGNANT', weeks: Math.floor(diffDays / 7), days: diffDays % 7, edd };
+  const calculation = calculatePregnancyFromLmp(lmpDate, asOfDate);
+  if (!calculation) {
+    throw new AppError('Invalid pregnancy input: LMP must be a valid date and cannot be after the appointment date.', 422);
+  }
+  return {
+    status: 'PREGNANT',
+    weeks: calculation.gestationalAgeWeeks,
+    days: calculation.gestationalAgeDays,
+    edd: calculation.estimatedDueDate
+  };
 }
 
 /** Appointment code: APT-YYMMDD-NNNN (global daily sequence) */
