@@ -114,8 +114,19 @@ async function saveTestParameters(testId,payload,actorUserId) {
 
 async function createOrder(patientId,branchId,actorUserId,payload={}) {
   return withTransaction(async conn=>{
-    const [[patient]]=await conn.execute('SELECT id,name,health_id,branch_id FROM patients WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:patientId});
+    const [[patient]]=await conn.execute('SELECT id,name,health_id,branch_id,referral_code,referral_provider_id FROM patients WHERE id=:id AND deleted_at IS NULL FOR UPDATE',{id:patientId});
     if(!patient) throw new AppError('Patient not found',404);
+
+    let referralCode=patient.referral_code||null;
+    let referralProviderId=patient.referral_provider_id||null;
+    if(payload.referralCode){
+      const normalized=referralService.normalizeCode(payload.referralCode);
+      const [[provider]]=await conn.execute('SELECT id,referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',{code:normalized});
+      if(!provider) throw new AppError('The selected referral code is invalid or inactive.',422);
+      referralCode=provider.referral_code;
+      referralProviderId=provider.id;
+    }
+    if(source==='AGENT' && !referralProviderId) throw new AppError('A valid active referral code is required for Agent diagnostic bookings.',422);
     const lab=await getLaboratoryForBranch(branchId||patient.branch_id,conn);
     if(!lab) throw new AppError('No active laboratory/diagnostic centre is configured',409);
     const ids=[...new Set((payload.testIds||[]).map(Number).filter(Number.isInteger))];
@@ -130,7 +141,7 @@ async function createOrder(patientId,branchId,actorUserId,payload={}) {
     const source=['DOCTOR','PATIENT','RECEPTION','LAB','AGENT'].includes(payload.source)?payload.source:'RECEPTION';
     const status=['PATIENT','AGENT'].includes(source)?'BOOKED':(source==='DOCTOR'?'ORDERED':'BOOKED');
     const total=tests.reduce((n,t)=>n+Number(t.price||0),0);
-    const [r]=await conn.execute('INSERT INTO lab_orders (order_code,patient_id,visit_id,laboratory_id,source,ordered_by,referral_code,booking_date,priority,status,clinical_notes,total_amount,net_amount,payment_status) VALUES (:code,:patientId,:visitId,:labId,:source,:userId,:referralCode,:date,:priority,:status,:notes,:total,:total,"UNBILLED")',{code:orderCode,patientId,visitId:payload.visitId||null,labId:lab.id,source,userId:actorUserId,date:payload.bookingDate||new Date().toISOString().slice(0,10),priority:payload.priority||'ROUTINE',status,notes:payload.clinicalNotes||null,total,referralCode:payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null});
+    const [r]=await conn.execute('INSERT INTO lab_orders (order_code,patient_id,visit_id,laboratory_id,source,ordered_by,referral_code,referral_provider_id,booking_date,priority,status,clinical_notes,total_amount,net_amount,payment_status) VALUES (:code,:patientId,:visitId,:labId,:source,:userId,:referralCode,:referralProviderId,:date,:priority,:status,:notes,:total,:total,"UNBILLED")',{code:orderCode,patientId,visitId:payload.visitId||null,labId:lab.id,source,userId:actorUserId,date:payload.bookingDate||new Date().toISOString().slice(0,10),priority:payload.priority||'ROUTINE',status,notes:payload.clinicalNotes||null,total,referralCode,referralProviderId});
     for(const t of tests) await conn.execute('INSERT INTO lab_order_items (lab_order_id,test_id,test_code_snapshot,test_name_snapshot,test_type_snapshot,specimen_type_snapshot,price_snapshot,status,scheduled_date) VALUES (:orderId,:testId,:code,:name,:type,:specimen,:price,:status,:date)',{orderId:r.insertId,testId:t.id,code:t.code,name:t.name,type:t.test_type,specimen:t.specimen_type,price:t.price,status:source==='DOCTOR'?'ORDERED':'BOOKED',date:payload.bookingDate||new Date().toISOString().slice(0,10)});
     await conn.execute('INSERT INTO lab_order_status_history (lab_order_id,old_status,new_status,changed_by,note) VALUES (:orderId,NULL,:status,:userId,:note)',{orderId:r.insertId,status,userId:actorUserId,note:'Created from '+source.toLowerCase()+' workflow'});
     await auditService.log({userId:actorUserId,action:'LAB_ORDER_CREATED',entity:'lab_order',entityId:r.insertId,newValue:{orderCode,patientId,source,testIds:ids}},conn);
