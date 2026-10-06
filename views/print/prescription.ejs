@@ -30,25 +30,7 @@
 %>
 
 <div class="print-sheet prescription-one-page">
-  <div class="rx-letterhead">
-    <div class="rx-brand">
-      <%- include('./_header') %>
-    </div>
-    <div class="rx-rmp">
-      <strong>Dr. <%= prescription.doctor_name %></strong>
-      <% if (prescription.qualification) { %><span><%= prescription.qualification %></span><% } %>
-      <% if (prescription.specialisation) { %><span><%= prescription.specialisation %></span><% } %>
-      <% if (prescription.professional_reg_number) { %><span>Reg. No. <%= prescription.professional_reg_number %></span><% } %>
-      <% if (prescription.doctor_address) { %><span><%= prescription.doctor_address %></span><% } %>
-      <% if (prescription.doctor_mobile || prescription.doctor_email) { %><span><%= [prescription.doctor_mobile, prescription.doctor_email].filter(Boolean).join(' · ') %></span><% } %>
-    </div>
-    <% if (barcodeDataUri && prescription.health_id) { %>
-      <div class="rx-health-barcode" aria-label="Patient Health ID barcode">
-        <img src="<%= barcodeDataUri %>" alt="Health ID barcode">
-        <span>Health ID: <strong><%= prescription.health_id %></strong></span>
-      </div>
-    <% } %>
-  </div>
+  <div class="rx-preprinted-letterhead-space" aria-label="Reserved space for pre-printed hospital letterhead"></div>
 
   <div class="rx-patient-bar">
     <div><strong><%= prescription.patient_name %></strong><span><%= prescription.age_years || '—' %> yrs</span><span><%= prescription.gender || '—' %></span></div>
