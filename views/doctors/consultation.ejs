@@ -16,7 +16,7 @@
   </div>
   <div class="d-flex gap-2">
     <a href="/patients/<%= visit.health_id %>" class="btn btn-outline-secondary btn-sm">Full Profile</a>
-    <% if (canEdit) { %>
+    <% if (!isFinalized) { %>
       <form method="POST" action="/doctor/consultation/<%= visit.id %>/complete" data-confirm="Complete this consultation? The clinical record will be finalized and can no longer be edited.">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button class="btn btn-success btn-sm"><i class="bi bi-check2-all"></i> Complete Consultation</button>
