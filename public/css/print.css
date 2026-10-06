@@ -111,13 +111,13 @@ body.print-doc {
 .rx-rmp{min-width:230px;text-align:right;font-size:8.5px;line-height:1.35}
 .rx-rmp strong{display:block;font-size:12px}
 .rx-rmp span{display:block}
-.rx-health-barcode{width:118px;flex:0 0 118px;text-align:center;align-self:flex-start;font-size:7px;line-height:1.15}
+.rx-health-barcode{width:118px;min-width:118px;text-align:center;align-self:flex-start;font-size:7px;line-height:1.15}
 .rx-health-barcode img{display:block;width:112px;height:32px;object-fit:contain;margin:0 auto 2px}
 .rx-health-barcode span{display:block;white-space:nowrap}
 @media print{
   .rx-health-barcode{break-inside:avoid;page-break-inside:avoid}
 }
-.rx-patient-bar{display:grid;grid-template-columns:1.35fr 1fr 1.15fr;gap:6px;padding:5px 7px;background:#f3f7f7;border:1px solid #d7e3e3;border-radius:4px;margin-bottom:6px}
+.rx-patient-bar{display:grid;grid-template-columns:1.35fr 1fr 1.15fr 118px;gap:6px;padding:5px 7px;background:#f3f7f7;border:1px solid #d7e3e3;border-radius:4px;margin-bottom:6px}
 .rx-patient-bar>div{display:flex;gap:8px;flex-wrap:wrap}
 .rx-patient-bar span{white-space:nowrap}
 .rx-complementary-mark{position:absolute;right:4px;top:55px;width:25px;height:25px;border:3px solid #b91c1c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#b91c1c;font-size:16px;background:#fff}
