@@ -3,6 +3,8 @@
 -- Stores free-text Rx notes on each prescription version.
 -- =====================================================================
 
+-- Use the current database, so this migration is safe on production
+-- databases that were provisioned from an older schema.
 SET @has_rx_notes := (
   SELECT COUNT(*)
   FROM information_schema.COLUMNS
