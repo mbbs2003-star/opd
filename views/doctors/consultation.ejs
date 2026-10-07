@@ -350,67 +350,7 @@
   if(ph.surgery){document.getElementById('phSurgery').value=ph.surgery.value||'NO';document.getElementById('phSurgeryOther').value=ph.surgery.other||'';}if(ph.sleep){document.getElementById('phSleep').value=ph.sleep.value||'NORMAL';document.getElementById('phSleepOther').value=ph.sleep.other||'';}if(ph.drinking){document.getElementById('phDrinking').value=ph.drinking.value||'NO';document.getElementById('phDrinkingOther').value=ph.drinking.other||'';}if(ph.bowel){document.getElementById('phBowel').value=ph.bowel.value||'REGULAR';document.getElementById('phBowelOther').value=ph.bowel.other||'';}['phSurgery','phSleep','phDrinking','phBowel'].forEach(id=>document.getElementById(id)?.dispatchEvent(new Event('change')));sync();syncHistory();
 })();
 </script>
-<script>
-(function () {
-  const status = document.querySelector('select[name="pregnancyStatus"]');
-  const lmp = document.querySelector('input[name="lmpDate"]');
-  const gravidaField = document.getElementById('doctorGravidaField');
-  const weeks = document.getElementById('doctorGestationalWeeks');
-  const days = document.getElementById('doctorGestationalDays');
-  const edd = document.getElementById('doctorEdd');
-  if (status && lmp) {
-    function parseDate(value) {
-      const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!m) return null;
-      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
-    }
-    function fmt(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
-    function calculatePregnancy() {
-      const pregnant = status.value === 'PREGNANT';
-      if (gravidaField) gravidaField.style.display = pregnant ? '' : 'none';
-      if (!pregnant) {
-        if (weeks) weeks.value = '';
-        if (days) days.value = '';
-        if (edd) edd.value = '';
-        return true;
-      }
-      const l = parseDate(lmp.value);
-      if (!l) {
-        if (weeks) weeks.value = '';
-        if (days) days.value = '';
-        if (edd) edd.value = '';
-        return false;
-      }
-      const today = new Date();
-      const asOf = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const elapsed = Math.floor((asOf - l) / 86400000);
-      if (elapsed < 0) {
-        if (weeks) weeks.value = '';
-        if (days) days.value = '';
-        if (edd) edd.value = '';
-        return false;
-      }
-      if (weeks) weeks.value = Math.floor(elapsed / 7);
-      if (days) days.value = elapsed % 7;
-      const due = new Date(l.getFullYear(), l.getMonth(), l.getDate());
-      due.setDate(due.getDate() + 280);
-      if (edd) edd.value = fmt(due);
-      return true;
-    }
-    status.addEventListener('change', calculatePregnancy);
-    lmp.addEventListener('change', calculatePregnancy);
-    calculatePregnancy();
-    document.getElementById('consultationRxForm')?.addEventListener('submit', function(e) {
-      if (status.value === 'PREGNANT' && !calculatePregnancy()) {
-        e.preventDefault();
-        alert('Invalid input: please enter a valid LMP date that is not in the future.');
-        lmp.focus();
-      }
-    });
-  }
-})();
-</script>
+
 <script>
 (function () {
   const height = document.getElementById('consultHeightCm');

@@ -4,7 +4,7 @@ const scheduleService = require('./scheduleService');
 const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
 const referralService = require('./referralService');
-const { calculatePregnancy: calculatePregnancyFromLmp } = require('../utils/pregnancyCalculator');
+const { calculatePregnancy: calculatePregnancyFromLmp, calculatePregnancyFromReference, calculatePregnancyFromUltrasound, calculatePregnancyFromUltrasoundEdd } = require('../utils/pregnancyCalculator');
 
 function calculatePregnancy(lmpDate, pregnancyStatus, asOfDate) {
   if (pregnancyStatus !== 'PREGNANT' || !lmpDate) {
@@ -88,9 +88,35 @@ async function bookAppointment(payload, actorUserId) {
         referralProviderId = provider.id;
       }
     }
-    const obstetric = isFemale
-      ? calculatePregnancy(payload.lmpDate, obstetricStatus, appointmentDate)
-      : { status: 'UNKNOWN', weeks: null, days: null, edd: null };
+    let obstetric = { status: obstetricStatus, weeks: null, days: null, edd: null, lmpDate: null };
+    let datingMethod = null;
+    if (isFemale && obstetricStatus === 'PREGNANT') {
+      datingMethod = String(payload.pregnancyDatingMethod || 'LMP').toUpperCase();
+      let calculation;
+      if (datingMethod === 'USG') {
+        calculation = calculatePregnancyFromUltrasound(
+          payload.usgDate, payload.usgGestationalAgeWeeks, payload.usgGestationalAgeDays, appointmentDate
+        );
+      } else if (datingMethod === 'USG_EDD') {
+        calculation = calculatePregnancyFromUltrasoundEdd(payload.usgEdd, appointmentDate);
+      } else if (datingMethod === 'CONCEPTION') {
+        calculation = calculatePregnancyFromReference(payload.conceptionDate, 'CONCEPTION', appointmentDate);
+      } else if (datingMethod === 'EDD') {
+        calculation = calculatePregnancyFromReference(payload.referenceDate || payload.lmpDate, 'EDD', appointmentDate);
+      } else {
+        calculation = calculatePregnancyFromLmp(payload.lmpDate, appointmentDate);
+      }
+      if (!calculation) throw new AppError('Invalid pregnancy dating input. Check the LMP/conception/EDD or USG/ultrasound report values.', 422);
+      obstetric = {
+        status: 'PREGNANT',
+        weeks: calculation.gestationalAgeWeeks,
+        days: calculation.gestationalAgeDays,
+        edd: calculation.estimatedDueDate,
+        lmpDate: calculation.lmpDate
+      };
+    } else if (isFemale) {
+      datingMethod = null;
+    }
 
     const [[doctor]] = await conn.execute(
       `SELECT id, consultation_fee, branch_id, department_id
@@ -117,13 +143,15 @@ async function bookAppointment(payload, actorUserId) {
       `INSERT INTO appointments
         (appointment_code, patient_id, doctor_id, branch_id, department_id,
          appointment_date, slot_time, token_number, reason,
-         lmp_date, gravida, para, abortions, pregnancy_status,
+         lmp_date, gravida, para, abortions, pregnancy_status, pregnancy_dating_method,
+         usg_date, usg_gestational_age_weeks, usg_gestational_age_days, usg_edd,
          gestational_age_weeks, gestational_age_days, estimated_due_date, obstetric_notes,
          status, created_by, referral_code, referral_provider_id)
        VALUES
         (:code, :patientId, :doctorId, :branchId, :departmentId,
          :date, :slotTime, :token, :reason,
-         :lmpDate, :gravida, :para, :abortions, :pregnancyStatus,
+         :lmpDate, :gravida, :para, :abortions, :pregnancyStatus, :datingMethod,
+         :usgDate, :usgWeeks, :usgDays, :usgEdd,
          :gaWeeks, :gaDays, :edd, :obstetricNotes,
          'BOOKED', :createdBy, :referralCode, :referralProviderId)`,
       {
@@ -136,7 +164,12 @@ async function bookAppointment(payload, actorUserId) {
         slotTime,
         token,
         reason: reason || null,
-        lmpDate: isFemale ? (payload.lmpDate || null) : null,
+        lmpDate: isFemale && obstetricStatus === 'PREGNANT' ? obstetric.lmpDate : null,
+        datingMethod: isFemale && obstetricStatus === 'PREGNANT' ? datingMethod : null,
+        usgDate: isFemale && obstetricStatus === 'PREGNANT' && datingMethod.startsWith('USG') ? (payload.usgDate || null) : null,
+        usgWeeks: isFemale && obstetricStatus === 'PREGNANT' && datingMethod === 'USG' ? Number(payload.usgGestationalAgeWeeks) : null,
+        usgDays: isFemale && obstetricStatus === 'PREGNANT' && datingMethod === 'USG' ? Number(payload.usgGestationalAgeDays || 0) : null,
+        usgEdd: isFemale && obstetricStatus === 'PREGNANT' && datingMethod === 'USG_EDD' ? (payload.usgEdd || null) : null,
         gravida: isFemale && obstetricStatus === 'PREGNANT' && payload.gravida !== '' ? Math.max(0, parseInt(payload.gravida, 10) || 0) : null,
         para: isFemale && payload.para !== '' && payload.para != null ? Math.max(0, parseInt(payload.para, 10) || 0) : null,
         abortions: isFemale && payload.abortions !== '' && payload.abortions != null ? Math.max(0, parseInt(payload.abortions, 10) || 0) : null,

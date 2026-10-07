@@ -2,10 +2,12 @@
   const pregnancyData = pregnancy || {};
   const editable = canEdit !== false;
   const initialCalculation = pregnancyCalculation || null;
-  const initialMode = initialCalculation && initialCalculation.referenceMode ? initialCalculation.referenceMode : 'LMP';
+  const initialMode = initialCalculation && initialCalculation.referenceMode ? initialCalculation.referenceMode : (pregnancyData.pregnancy_dating_method || 'LMP');
   const initialReference = initialCalculation && initialCalculation.referenceDate
     ? initialCalculation.referenceDate
-    : (pregnancyData.lmp_date ? String(pregnancyData.lmp_date).slice(0, 10) : '');
+    : (initialMode === 'USG_EDD' ? (pregnancyData.usg_edd ? String(pregnancyData.usg_edd).slice(0, 10) : '')
+      : (initialMode === 'USG' ? (pregnancyData.usg_date ? String(pregnancyData.usg_date).slice(0, 10) : '')
+      : (pregnancyData.lmp_date ? String(pregnancyData.lmp_date).slice(0, 10) : '')));
 %>
 <div class="card mb-3 pregnancy-assessment-card" data-pregnancy-widget data-editable="<%= editable ? '1' : '0' %>">
   <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -33,6 +35,8 @@
           <option value="LMP" <%= initialMode === 'LMP' ? 'selected' : '' %>>1st day of LMP</option>
           <option value="CONCEPTION" <%= initialMode === 'CONCEPTION' ? 'selected' : '' %>>Conception date</option>
           <option value="EDD" <%= initialMode === 'EDD' ? 'selected' : '' %>>Estimated due date</option>
+          <option value="USG" <%= initialMode === 'USG' ? 'selected' : '' %>>USG / Ultrasound — gestational age</option>
+          <option value="USG_EDD" <%= initialMode === 'USG_EDD' ? 'selected' : '' %>>USG / Ultrasound — EDD</option>
         </select>
       </div>
 
@@ -40,6 +44,22 @@
         <label class="form-label small" data-pregnancy-reference-label>Date</label>
         <input type="date" class="form-control" data-pregnancy-reference value="<%= initialReference %>" <%= editable ? '' : 'readonly' %>>
       </div>
+
+      <div class="col-12 col-md-6" data-pregnancy-usg-fields style="display:none">
+        <label class="form-label small">USG / Ultrasound gestational age at scan</label>
+        <div class="input-group">
+          <input type="number" min="0" max="45" name="usgGestationalAgeWeeks" data-pregnancy-usg-weeks class="form-control" value="<%= pregnancyData.usg_gestational_age_weeks ?? '' %>" <%= editable ? '' : 'readonly' %>>
+          <span class="input-group-text">weeks</span>
+          <input type="number" min="0" max="6" name="usgGestationalAgeDays" data-pregnancy-usg-days class="form-control" value="<%= pregnancyData.usg_gestational_age_days ?? '0' %>" <%= editable ? '' : 'readonly' %>>
+          <span class="input-group-text">days</span>
+        </div>
+      </div>
+
+      <input type="hidden" name="pregnancyDatingMethod" data-pregnancy-dating-method value="<%= initialMode %>">
+      <input type="hidden" name="conceptionDate" data-pregnancy-conception-input>
+      <input type="hidden" name="referenceDate" data-pregnancy-reference-input>
+      <input type="hidden" name="usgDate" data-pregnancy-usg-date value="<%= pregnancyData.usg_date ? String(pregnancyData.usg_date).slice(0,10) : '' %>">
+      <input type="hidden" name="usgEdd" data-pregnancy-usg-edd value="<%= pregnancyData.usg_edd ? String(pregnancyData.usg_edd).slice(0,10) : '' %>">
 
       <input type="hidden" name="lmpDate" data-pregnancy-lmp value="<%= pregnancyData.lmp_date ? String(pregnancyData.lmp_date).slice(0,10) : '' %>">
 
@@ -97,6 +117,14 @@
   const reference = root.querySelector('[data-pregnancy-reference]');
   const referenceLabel = root.querySelector('[data-pregnancy-reference-label]');
   const lmp = root.querySelector('[data-pregnancy-lmp]');
+  const datingMethod = root.querySelector('[data-pregnancy-dating-method]');
+  const conceptionInput = root.querySelector('[data-pregnancy-conception-input]');
+  const referenceInput = root.querySelector('[data-pregnancy-reference-input]');
+  const usgDateInput = root.querySelector('[data-pregnancy-usg-date]');
+  const usgEddInput = root.querySelector('[data-pregnancy-usg-edd]');
+  const usgFields = root.querySelector('[data-pregnancy-usg-fields]');
+  const usgWeeks = root.querySelector('[data-pregnancy-usg-weeks]');
+  const usgDays = root.querySelector('[data-pregnancy-usg-days]');
   const results = root.querySelector('[data-pregnancy-results]');
   const error = root.querySelector('[data-pregnancy-error]');
   const ga = root.querySelector('[data-pregnancy-ga]');
@@ -126,29 +154,67 @@
     return date ? date.toLocaleDateString('en-IN') : '—';
   }
   function calculate() {
+    const mode = method.value || 'LMP';
+    datingMethod.value = mode;
+
     if (status.value !== 'PREGNANT') {
       results.style.display = 'none';
       error.style.display = 'none';
       lmp.value = '';
+      usgDateInput.value = '';
+      usgEddInput.value = '';
       return true;
     }
 
     const ref = parseDate(reference.value);
-    if (!ref) {
-      results.style.display = 'none';
-      error.style.display = '';
-      error.querySelector('.alert').textContent = 'Enter a valid pregnancy dating date.';
-      return false;
-    }
-
-    const mode = method.value || 'LMP';
     const today = new Date();
     const asOf = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    let calculatedLmp = ref;
-    if (mode === 'CONCEPTION') calculatedLmp = addDays(ref, -14);
-    if (mode === 'EDD') calculatedLmp = addDays(ref, -280);
+    let calculatedLmp = null;
+    let due = null;
+    let scanDate = null;
 
-    if (calculatedLmp > asOf) {
+    if (mode === 'USG' || mode === 'USG_EDD') {
+      scanDate = mode === 'USG' ? ref : null;
+      if (mode === 'USG') {
+        const weeks = Number(usgWeeks.value);
+        const days = Number(usgDays.value || 0);
+        if (!scanDate || !Number.isInteger(weeks) || !Number.isInteger(days) || weeks < 0 || weeks > 45 || days < 0 || days > 6) {
+          results.style.display = 'none';
+          error.style.display = '';
+          error.querySelector('.alert').textContent = 'Enter the USG/ultrasound scan date and valid gestational age (weeks 0–45, days 0–6).';
+          return false;
+        }
+        calculatedLmp = addDays(scanDate, -(weeks * 7 + days));
+        usgDateInput.value = fmt(scanDate);
+        usgEddInput.value = '';
+      } else {
+        if (!ref) {
+          results.style.display = 'none';
+          error.style.display = '';
+          error.querySelector('.alert').textContent = 'Enter the EDD stated in the USG/ultrasound report.';
+          return false;
+        }
+        calculatedLmp = addDays(ref, -280);
+        usgDateInput.value = '';
+        usgEddInput.value = fmt(ref);
+      }
+    } else {
+      if (!ref) {
+        results.style.display = 'none';
+        error.style.display = '';
+        error.querySelector('.alert').textContent = 'Enter a valid pregnancy dating date.';
+        return false;
+      }
+      calculatedLmp = ref;
+      if (mode === 'CONCEPTION') calculatedLmp = addDays(ref, -14);
+      if (mode === 'EDD') calculatedLmp = addDays(ref, -280);
+      conceptionInput.value = mode === 'CONCEPTION' ? fmt(ref) : '';
+      referenceInput.value = mode === 'EDD' ? fmt(ref) : '';
+      usgDateInput.value = '';
+      usgEddInput.value = '';
+    }
+
+    if (!calculatedLmp || calculatedLmp > asOf) {
       results.style.display = 'none';
       error.style.display = '';
       error.querySelector('.alert').textContent = 'The calculated LMP cannot be in the future.';
@@ -158,7 +224,7 @@
     const elapsed = Math.floor((asOf - calculatedLmp) / 86400000);
     const weeks = Math.floor(elapsed / 7);
     const days = elapsed % 7;
-    const due = addDays(calculatedLmp, 280);
+    due = addDays(calculatedLmp, 280);
     const conceptionDate = addDays(calculatedLmp, 14);
     const remainingDays = Math.max(0, 280 - elapsed);
 
@@ -169,20 +235,23 @@
     remaining.textContent = Math.floor(remainingDays / 7) + 'w ' + (remainingDays % 7) + 'd';
     derivedLmp.textContent = display(calculatedLmp);
     conception.textContent = display(conceptionDate);
-    basis.textContent = mode === 'CONCEPTION' ? 'Conception date' : (mode === 'EDD' ? 'Estimated due date' : 'LMP');
+    basis.textContent = mode === 'USG' ? 'USG / Ultrasound gestational age' :
+      (mode === 'USG_EDD' ? 'USG / Ultrasound EDD' :
+      (mode === 'CONCEPTION' ? 'Conception date' : (mode === 'EDD' ? 'Estimated due date' : 'LMP')));
     termStatus.textContent = elapsed > 280 ? 'Past estimated due date' : 'Within estimated pregnancy period';
     results.style.display = '';
     error.style.display = 'none';
     return true;
   }
-
   function updateLabel() {
-    const labels = { LMP: '1st day of LMP', CONCEPTION: 'Conception date', EDD: 'Estimated due date' };
+    const labels = { LMP: '1st day of LMP', CONCEPTION: 'Conception date', EDD: 'Estimated due date', USG: 'USG / Ultrasound scan date', USG_EDD: 'USG / Ultrasound EDD' };
     referenceLabel.textContent = labels[method.value] || 'Date';
+    usgFields.style.display = method.value === 'USG' ? '' : 'none';
   }
 
   status.addEventListener('change', calculate);
   method.addEventListener('change', function () { updateLabel(); calculate(); });
+  [usgWeeks, usgDays].forEach(function (field) { field.addEventListener('input', calculate); });
   reference.addEventListener('change', calculate);
   updateLabel();
   calculate();

@@ -80,11 +80,16 @@
         <div class="card pregnancy-assessment-card border-info">
           <div class="card-header"><strong>Female / Obstetric Assessment</strong></div>
           <div class="card-body">
-            <div class="alert alert-info small">Use LMP, conception date, or an established EDD. Gestational age and EDD are calculated automatically; the server recalculates them when the appointment is saved.</div>
+            <div class="alert alert-info small">Use LMP, conception date, EDD, or a USG/ultrasound report. Gestational age and EDD are calculated automatically; the server recalculates them when the appointment is saved.</div>
             <div class="row g-2">
               <div class="col-md-3"><label class="form-label small">Pregnancy status</label><select name="pregnancyStatus" id="pregnancyStatus" class="form-select"><option value="UNKNOWN">Unknown</option><option value="NOT_PREGNANT">Not pregnant</option><option value="PREGNANT">Pregnant</option></select></div>
-              <div class="col-md-3"><label class="form-label small">I know</label><select id="pregnancyMethod" class="form-select"><option value="LMP">1st day of LMP</option><option value="CONCEPTION">Conception date</option><option value="EDD">Estimated due date</option></select></div>
-              <div class="col-md-3"><label class="form-label small" id="pregnancyReferenceLabel">Date</label><input type="date" id="pregnancyReferenceDate" class="form-control"><input type="hidden" name="lmpDate" id="lmpDate"></div>
+              <div class="col-md-3"><label class="form-label small">Dating source</label><select id="pregnancyMethod" class="form-select"><option value="LMP">1st day of LMP</option><option value="CONCEPTION">Conception date</option><option value="EDD">Estimated due date</option><option value="USG">USG / Ultrasound — GA</option><option value="USG_EDD">USG / Ultrasound — EDD</option></select></div>
+              <div class="col-md-3"><label class="form-label small" id="pregnancyReferenceLabel">Date</label><input type="date" id="pregnancyReferenceDate" class="form-control"><input type="hidden" name="lmpDate" id="lmpDate"><input type="hidden" name="pregnancyDatingMethod" id="pregnancyDatingMethod"></div>
+              <div class="col-md-6" id="bookingUsgFields" style="display:none"><label class="form-label small">USG / Ultrasound gestational age at scan</label><div class="input-group"><input type="number" min="0" max="45" name="usgGestationalAgeWeeks" id="bookingUsgWeeks" class="form-control" placeholder="Weeks"><span class="input-group-text">weeks</span><input type="number" min="0" max="6" name="usgGestationalAgeDays" id="bookingUsgDays" class="form-control" placeholder="Days" value="0"><span class="input-group-text">days</span></div></div>
+              <input type="hidden" name="conceptionDate" id="bookingConceptionDate">
+              <input type="hidden" name="referenceDate" id="bookingReferenceDate">
+              <input type="hidden" name="usgDate" id="bookingUsgDate">
+              <input type="hidden" name="usgEdd" id="bookingUsgEdd">
               <div class="col-md-3"><label class="form-label small">Gravida (G)</label><input type="number" name="gravida" min="0" class="form-control"></div>
               <div class="col-md-3"><label class="form-label small">Para (P)</label><input type="number" name="para" min="0" class="form-control"></div>
               <div class="col-md-3"><label class="form-label small">Abortions (A)</label><input type="number" name="abortions" min="0" class="form-control"></div>
@@ -178,11 +183,19 @@
   const pregnancyMethod = document.getElementById('pregnancyMethod');
   const pregnancyReferenceDate = document.getElementById('pregnancyReferenceDate');
   const pregnancyLmp = document.getElementById('lmpDate');
+  const pregnancyDatingMethod = document.getElementById('pregnancyDatingMethod');
+  const pregnancyUsgFields = document.getElementById('bookingUsgFields');
+  const pregnancyUsgWeeks = document.getElementById('bookingUsgWeeks');
+  const pregnancyUsgDays = document.getElementById('bookingUsgDays');
   const pregnancyResult = document.getElementById('pregnancyCalculatorResult');
   const pregnancyError = document.getElementById('pregnancyBookingError');
   const pregnancyReferenceLabel = document.getElementById('pregnancyReferenceLabel');
+  const pregnancyConceptionDate = document.getElementById('bookingConceptionDate');
+  const pregnancyReferenceHidden = document.getElementById('bookingReferenceDate');
+  const pregnancyUsgDate = document.getElementById('bookingUsgDate');
+  const pregnancyUsgEdd = document.getElementById('bookingUsgEdd');
   function bookingParseDate(value) {
-    const m = String(value || '').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+    const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m) return null;
     const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
     return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 && d.getDate() === Number(m[3]) ? d : null;
@@ -190,185 +203,51 @@
   function bookingAddDays(date, days) { const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()); d.setDate(d.getDate() + days); return d; }
   function bookingFmt(date) { return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0'); }
   function bookingDisplay(date) { return date ? date.toLocaleDateString('en-IN') : '—'; }
-  function calculateBookingPregnancy() {
-    if (!pregnancyStatus || pregnancyStatus.value !== 'PREGNANT') {
-      if (pregnancyResult) pregnancyResult.style.display = 'none';
-      if (pregnancyError) pregnancyError.style.display = 'none';
-      if (pregnancyLmp) pregnancyLmp.value = '';
+  function bookingCalculate() {
+    const mode = pregnancyMethod.value || 'LMP';
+    pregnancyDatingMethod.value = mode;
+    pregnancyUsgFields.style.display = mode === 'USG' ? '' : 'none';
+    const labels = {LMP:'1st day of LMP',CONCEPTION:'Conception date',EDD:'Estimated due date',USG:'USG / Ultrasound scan date',USG_EDD:'USG / Ultrasound EDD'};
+    pregnancyReferenceLabel.textContent = labels[mode] || 'Date';
+    if (pregnancyStatus.value !== 'PREGNANT') {
+      pregnancyResult.style.display='none'; pregnancyError.style.display='none'; pregnancyLmp.value='';
       return true;
     }
     const ref = bookingParseDate(pregnancyReferenceDate.value);
-    if (!ref) {
-      pregnancyResult.style.display = 'none';
-      pregnancyError.textContent = 'Enter a valid pregnancy dating date.';
-      pregnancyError.style.display = '';
-      return false;
-    }
-    let lmp = ref;
-    if (pregnancyMethod.value === 'CONCEPTION') lmp = bookingAddDays(ref, -14);
-    if (pregnancyMethod.value === 'EDD') lmp = bookingAddDays(ref, -280);
-    const today = new Date();
-    const asOf = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    if (lmp > asOf) {
-      pregnancyResult.style.display = 'none';
-      pregnancyError.textContent = 'The calculated LMP cannot be in the future.';
-      pregnancyError.style.display = '';
-      return false;
-    }
-    const elapsed = Math.floor((asOf - lmp) / 86400000);
-    const weeks = Math.floor(elapsed / 7), days = elapsed % 7, remainingDays = Math.max(0, 280 - elapsed);
-    const edd = bookingAddDays(lmp, 280), conception = bookingAddDays(lmp, 14);
-    pregnancyLmp.value = bookingFmt(lmp);
-    document.getElementById('bookingGaResult').textContent = weeks + ' weeks ' + days + ' days';
-    document.getElementById('bookingEddResult').textContent = bookingDisplay(edd);
-    document.getElementById('bookingTrimesterResult').textContent = weeks < 14 ? 'First trimester' : (weeks < 28 ? 'Second trimester' : 'Third trimester');
-    document.getElementById('bookingRemainingResult').textContent = Math.floor(remainingDays/7) + 'w ' + (remainingDays%7) + 'd';
-    document.getElementById('bookingDerivedLmp').textContent = bookingDisplay(lmp);
-    document.getElementById('bookingConception').textContent = bookingDisplay(conception);
-    pregnancyResult.style.display = '';
-    pregnancyError.style.display = 'none';
-    return true;
-  }
-  if (pregnancyStatus) pregnancyStatus.addEventListener('change', calculateBookingPregnancy);
-  if (pregnancyMethod) pregnancyMethod.addEventListener('change', function(){ pregnancyReferenceLabel.textContent = pregnancyMethod.value === 'CONCEPTION' ? 'Conception date' : pregnancyMethod.value === 'EDD' ? 'Estimated due date' : '1st day of LMP'; calculateBookingPregnancy(); });
-  if (pregnancyReferenceDate) pregnancyReferenceDate.addEventListener('change', calculateBookingPregnancy);
-
-  // Department -> doctors cascade
-  const deptSel = document.getElementById('departmentId');
-  const docSel = document.getElementById('doctorId');
-  const branchSel = document.getElementById('branchId');
-
-  function loadDoctors() {
-    const deptId = deptSel.value;
-    if (!deptId) { docSel.innerHTML = '<option value="">Select department first</option>'; docSel.disabled = true; return; }
-    docSel.disabled = true;
-    docSel.innerHTML = '<option value="">Loading…</option>';
-    fetch('/doctors/api/list?departmentId=' + deptId + '&branchId=' + branchSel.value, { headers: { Accept: 'application/json' } })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.doctors.length) {
-          docSel.innerHTML = '<option value="">No doctors in this department</option>';
-          return;
-        }
-        docSel.innerHTML = '<option value="">Select doctor</option>' + data.doctors.map(function (d) {
-          return '<option value="' + d.id + '">' + d.name + ' (₹' + Number(d.consultation_fee).toFixed(2) + ')</option>';
-        }).join('');
-        docSel.disabled = false;
-      });
-  }
-  deptSel.addEventListener('change', loadDoctors);
-  branchSel.addEventListener('change', loadDoctors);
-
-  // Doctor + date -> slots. The calendar is restricted to dates where
-  // the selected doctor actually has an available OPD slot.
-  const dateInput = document.getElementById('appointmentDate');
-  const slotContainer = document.getElementById('slotContainer');
-  const slotTimeField = document.getElementById('slotTime');
-  const dateHint = document.getElementById('dateAvailabilityHint');
-  let availableDatePicker = null;
-  let availableDates = [];
-
-  function initDatePicker() {
-    if (!window.flatpickr) return;
-    if (availableDatePicker) availableDatePicker.destroy();
-    availableDatePicker = flatpickr(dateInput, {
-      dateFormat: 'Y-m-d',
-      minDate: '<%= today %>',
-      disable: [function(date) {
-        const value = [
-          date.getFullYear(),
-          String(date.getMonth() + 1).padStart(2, '0'),
-          String(date.getDate()).padStart(2, '0')
-        ].join('-');
-        return availableDates.length === 0 || !availableDates.includes(value);
-      }],
-      onChange: function(selectedDates, dateStr) {
-        if (dateStr) loadSlots();
+    let calculatedLmp = null;
+    if (mode === 'USG') {
+      const weeks = Number(pregnancyUsgWeeks.value), days = Number(pregnancyUsgDays.value || 0);
+      if (!ref || !Number.isInteger(weeks) || !Number.isInteger(days) || weeks < 0 || weeks > 45 || days < 0 || days > 6) {
+        pregnancyError.textContent='Enter the USG/ultrasound scan date and valid gestational age (weeks 0–45, days 0–6).'; pregnancyError.style.display=''; pregnancyResult.style.display='none'; return false;
       }
-    });
-  }
-
-  function loadAvailableDates() {
-    const doctorId = docSel.value;
-    slotTimeField.value = '';
-    slotContainer.innerHTML = '<span class="text-muted small">Select a date to see available slots.</span>';
-    if (!doctorId) {
-      availableDates = [];
-      if (dateHint) dateHint.textContent = "Select a doctor first. Only that doctor's available OPD dates will be enabled.";
-      initDatePicker();
-      return;
+      calculatedLmp = bookingAddDays(ref, -(weeks*7+days)); pregnancyUsgDate.value=bookingFmt(ref); pregnancyUsgEdd.value='';
+    } else if (mode === 'USG_EDD') {
+      if (!ref) { pregnancyError.textContent='Enter the EDD stated in the USG/ultrasound report.'; pregnancyError.style.display=''; pregnancyResult.style.display='none'; return false; }
+      calculatedLmp = bookingAddDays(ref,-280); pregnancyUsgDate.value=''; pregnancyUsgEdd.value=bookingFmt(ref);
+    } else {
+      if (!ref) { pregnancyError.textContent='Enter a valid pregnancy dating date.'; pregnancyError.style.display=''; pregnancyResult.style.display='none'; return false; }
+      calculatedLmp = mode==='CONCEPTION' ? bookingAddDays(ref,-14) : (mode==='EDD' ? bookingAddDays(ref,-280) : ref);
+      pregnancyConceptionDate.value = mode==='CONCEPTION' ? bookingFmt(ref) : '';
+      pregnancyReferenceHidden.value = mode==='EDD' ? bookingFmt(ref) : '';
+      pregnancyUsgDate.value=''; pregnancyUsgEdd.value='';
     }
-    if (dateHint) dateHint.textContent = 'Checking the doctor schedule and live slot capacity…';
-    fetch('/doctors/' + doctorId + '/available-dates?from=<%= today %>&days=90', { headers: { Accept: 'application/json' } })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        availableDates = Array.isArray(data.dates) ? data.dates : [];
-        initDatePicker();
-        if (!availableDates.length) {
-          dateHint.textContent = 'This doctor has no available OPD dates in the next 90 days.';
-          return;
-        }
-        dateHint.textContent = availableDates.length + ' available OPD date(s) found. Unavailable dates are disabled.';
-        const current = dateInput.value;
-        if (!availableDates.includes(current)) {
-          availableDatePicker.setDate(availableDates[0], true);
-        } else {
-          loadSlots();
-        }
-      })
-      .catch(function() {
-        availableDates = [];
-        initDatePicker();
-        if (dateHint) dateHint.textContent = 'Could not load doctor availability. Please try again.';
-      });
+    const today = new Date(); const asOf = new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    if (calculatedLmp > asOf) { pregnancyError.textContent='The calculated LMP cannot be in the future.'; pregnancyError.style.display=''; pregnancyResult.style.display='none'; return false; }
+    const elapsed=Math.floor((asOf-calculatedLmp)/86400000), weeks=Math.floor(elapsed/7), days=elapsed%7, due=bookingAddDays(calculatedLmp,280), remaining=Math.max(0,280-elapsed);
+    pregnancyLmp.value=bookingFmt(calculatedLmp);
+    document.getElementById('bookingGaResult').textContent=weeks+' weeks '+days+' days';
+    document.getElementById('bookingEddResult').textContent=bookingDisplay(due);
+    document.getElementById('bookingTrimesterResult').textContent=weeks<14?'First trimester':(weeks<28?'Second trimester':'Third trimester');
+    document.getElementById('bookingRemainingResult').textContent=Math.floor(remaining/7)+'w '+(remaining%7)+'d';
+    document.getElementById('bookingDerivedLmp').textContent=bookingDisplay(calculatedLmp);
+    document.getElementById('bookingConception').textContent=bookingDisplay(bookingAddDays(calculatedLmp,14));
+    pregnancyError.style.display='none'; pregnancyResult.style.display=''; return true;
   }
-
-  function loadSlots() {
-    const doctorId = docSel.value;
-    const date = dateInput.value;
-    slotTimeField.value = '';
-    if (!doctorId || !date) {
-      slotContainer.innerHTML = '<span class="text-muted small">Select a doctor and date to see available slots.</span>';
-      return;
-    }
-    slotContainer.innerHTML = '<span class="text-muted small">Loading slots…</span>';
-    fetch('/doctors/' + doctorId + '/slots?date=' + date, { headers: { Accept: 'application/json' } })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.slots.length) {
-          slotContainer.innerHTML = '<div class="text-danger small">This doctor holds no OPD on the selected date (no schedule, holiday, or on leave).</div>';
-          return;
-        }
-        slotContainer.innerHTML = data.slots.map(function (s) {
-          const disabled = s.available <= 0 ? 'disabled' : '';
-          const cls = s.available <= 0 ? 'btn-outline-secondary' : 'btn-outline-primary';
-          return '<button type="button" class="btn btn-sm ' + cls + ' m-1 slot-btn" ' + disabled +
-            ' data-time="' + s.time + '">' + s.label +
-            (s.capacity > 1 ? ' <span class="badge text-bg-light">' + s.available + '/' + s.capacity + '</span>' : '') +
-            '</button>';
-        }).join('');
-      });
-  }
-
-  docSel.addEventListener('change', function () { loadAvailableDates(); });
-  initDatePicker();
-
-  slotContainer.addEventListener('click', function (e) {
-    const btn = e.target.closest('.slot-btn');
-    if (!btn || btn.disabled) return;
-    slotContainer.querySelectorAll('.slot-btn').forEach(function (b) {
-      b.classList.remove('btn-primary', 'active');
-      if (!b.disabled) b.classList.add('btn-outline-primary');
-    });
-    btn.classList.remove('btn-outline-primary');
-    btn.classList.add('btn-primary', 'active');
-    slotTimeField.value = btn.dataset.time;
-  });
-
-  document.getElementById('bookingForm').addEventListener('submit', function (e) {
-    if (pregnancyStatus && pregnancyStatus.value === 'PREGNANT' && !calculateBookingPregnancy()) { e.preventDefault(); return; }
-    if (!patientIdField.value) { e.preventDefault(); alert('Please select a patient.'); return; }
-    if (!slotTimeField.value) { e.preventDefault(); alert('Please select a time slot.'); }
-  });
+  pregnancyStatus && pregnancyStatus.addEventListener('change', bookingCalculate);
+  pregnancyMethod && pregnancyMethod.addEventListener('change', bookingCalculate);
+  pregnancyReferenceDate && pregnancyReferenceDate.addEventListener('change', bookingCalculate);
+  [pregnancyUsgWeeks,pregnancyUsgDays].forEach(function(el){ el && el.addEventListener('input',bookingCalculate); });
+  document.querySelector('form')?.addEventListener('submit',function(e){ if(pregnancyStatus && pregnancyStatus.value==='PREGNANT' && !bookingCalculate()){e.preventDefault(); pregnancyError.scrollIntoView({behavior:'smooth',block:'center'});} });
+  bookingCalculate();
 })();
 </script>

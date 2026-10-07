@@ -299,6 +299,13 @@ async function book(req, res, next) {
         para: req.body.para,
         abortions: req.body.abortions,
         pregnancyStatus: req.body.pregnancyStatus,
+        pregnancyDatingMethod: req.body.pregnancyDatingMethod,
+        conceptionDate: req.body.conceptionDate,
+        referenceDate: req.body.referenceDate,
+        usgDate: req.body.usgDate,
+        usgGestationalAgeWeeks: req.body.usgGestationalAgeWeeks,
+        usgGestationalAgeDays: req.body.usgGestationalAgeDays,
+        usgEdd: req.body.usgEdd,
         obstetricNotes: req.body.obstetricNotes
       },
       req.user.id

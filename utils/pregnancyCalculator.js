@@ -112,10 +112,53 @@ function calculatePregnancyFromReference(referenceValue, mode = 'LMP', asOf = ne
   };
 }
 
+/**
+ * Calculate dating from an ultrasound/USG report that gives gestational age
+ * on the scan date. The reported scan GA is used to derive an LMP-equivalent
+ * date, then current GA and EDD are recalculated from that dating anchor.
+ */
+function calculatePregnancyFromUltrasound(scanDateValue, gaWeeksValue, gaDaysValue = 0, asOf = new Date()) {
+  const scanDate = parseDateOnly(scanDateValue);
+  const weeks = Number(gaWeeksValue);
+  const days = Number(gaDaysValue || 0);
+  if (!scanDate || !Number.isInteger(weeks) || !Number.isInteger(days) ||
+      weeks < 0 || weeks > 45 || days < 0 || days > 6) return null;
+
+  const derivedLmp = addDays(scanDate, -(weeks * 7 + days));
+  const result = calculatePregnancy(formatDateOnly(derivedLmp), asOf);
+  if (!result) return null;
+
+  return {
+    ...result,
+    referenceMode: 'USG',
+    referenceDate: formatDateOnly(scanDate),
+    ultrasoundDate: formatDateOnly(scanDate),
+    ultrasoundGestationalAgeWeeks: weeks,
+    ultrasoundGestationalAgeDays: days
+  };
+}
+
+/**
+ * Calculate dating when an ultrasound/USG report provides an established EDD.
+ */
+function calculatePregnancyFromUltrasoundEdd(usgEddValue, asOf = new Date()) {
+  const usgEdd = parseDateOnly(usgEddValue);
+  if (!usgEdd) return null;
+  const result = calculatePregnancyFromReference(formatDateOnly(usgEdd), 'EDD', asOf);
+  return result ? {
+    ...result,
+    referenceMode: 'USG_EDD',
+    referenceDate: formatDateOnly(usgEdd),
+    ultrasoundEdd: formatDateOnly(usgEdd)
+  } : null;
+}
+
 module.exports = {
   parseDateOnly,
   formatDateOnly,
   addDays,
   calculatePregnancy,
-  calculatePregnancyFromReference
+  calculatePregnancyFromReference,
+  calculatePregnancyFromUltrasound,
+  calculatePregnancyFromUltrasoundEdd
 };
