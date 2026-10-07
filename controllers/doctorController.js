@@ -56,9 +56,12 @@ async function view(req, res, next) {
     const [departments] = await pool.execute('SELECT id, name FROM departments WHERE is_active = 1 ORDER BY name');
 
     const [opdHistory] = await pool.execute(
-      `SELECT v.checked_in_at, v.status, p.health_id, p.name AS patient_name, c.diagnosis
+      `SELECT v.checked_in_at, v.status, p.health_id, p.name AS patient_name,
+              a.referral_code, rp.provider_name AS referral_provider_name, c.diagnosis
        FROM opd_visits v
        JOIN patients p ON p.id = v.patient_id
+       JOIN appointments a ON a.id = v.appointment_id
+       LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
        LEFT JOIN opd_consultations c ON c.visit_id = v.id
        WHERE v.doctor_id = :id
        ORDER BY v.checked_in_at DESC LIMIT 50`,
