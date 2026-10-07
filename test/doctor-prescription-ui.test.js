@@ -61,6 +61,43 @@ test('OTP signup verification accepts mysql2 JSON objects without JSON.parse err
   assert.doesNotMatch(source, /const payload = JSON\.parse\(record\.payload/);
 });
 
+test('login page does not offer Google sign-in', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'views', 'auth', 'login.ejs'), 'utf8');
+  assert.doesNotMatch(source, /Continue with Google/i);
+  assert.doesNotMatch(source, /href=["']\/auth\/google["']/i);
+  assert.match(source, /name=["']identifier["']/);
+  assert.match(source, /name=["']password["']/);
+});
+
+test('all rendered dates use dd-mm-yyyy formatters', () => {
+  const { formatDate, formatDateTime } = require('../utils/dateFormat');
+  assert.equal(formatDate('2026-10-08'), '08-10-2026');
+  assert.match(formatDateTime('2026-10-08T14:35:00'), /^08-10-2026 14:35$/);
+
+  const views = [
+    'views/patients/list.ejs',
+    'views/patients/profile.ejs',
+    'views/opd/appointments.ejs',
+    'views/opd/appointment-detail.ejs',
+    'views/doctors/consultation.ejs',
+    'views/billing/invoices.ejs',
+    'views/patient-portal/dashboard.ejs',
+    'views/patient-portal/prescription.ejs',
+    'views/lab/orders.ejs',
+    'views/pharmacy/batches.ejs',
+    'views/print/token.ejs',
+    'views/print/invoice.ejs',
+    'views/print/prescription.ejs',
+    'views/print/registration-slip.ejs'
+  ];
+
+  for (const relative of views) {
+    const source = fs.readFileSync(path.join(__dirname, '..', relative), 'utf8');
+    assert.doesNotMatch(source, /\.toLocaleDateString\s*\(/, relative);
+    assert.doesNotMatch(source, /\.toLocaleString\s*\(/, relative);
+  }
+});
+
 test('doctor Rx editor uses the requested default form, dose, and instructions for new medicines', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'views', 'doctors', 'consultation.ejs'), 'utf8');
   assert.match(source, /const medicineForm = item\.medicine_form \|\| 'Tablet';/);
