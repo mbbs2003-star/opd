@@ -125,12 +125,18 @@ async function createOrder(patientId,branchId,actorUserId,payload={}) {
     let referralProviderId=patient.referral_provider_id||null;
     if(payload.referralCode){
       const normalized=referralService.normalizeCode(payload.referralCode);
-      const [[provider]]=await conn.execute('SELECT id,referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',{code:normalized});
-      if(!provider) throw new AppError('The selected referral code is invalid or inactive.',422);
-      referralCode=provider.referral_code;
-      referralProviderId=provider.id;
+      const inherited =
+        referralProviderId &&
+        referralCode &&
+        referralService.normalizeCode(referralCode) === normalized;
+      if(!inherited){
+        const [[provider]]=await conn.execute('SELECT id,referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',{code:normalized});
+        if(!provider) throw new AppError('The selected referral code is invalid or inactive.',422);
+        referralCode=provider.referral_code;
+        referralProviderId=provider.id;
+      }
     }
-    if(source==='AGENT' && !referralProviderId) throw new AppError('A valid active referral code is required for Agent diagnostic bookings.',422);
+    if(source==='AGENT' && !referralProviderId) throw new AppError('A valid managed referral attribution is required for Agent diagnostic bookings.',422);
     const lab=await getLaboratoryForBranch(branchId||patient.branch_id,conn);
     if(!lab) throw new AppError('No active laboratory/diagnostic centre is configured',409);
     const ids=[...new Set((payload.testIds||[]).map(Number).filter(Number.isInteger))];
