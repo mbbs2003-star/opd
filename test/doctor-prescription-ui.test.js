@@ -56,7 +56,9 @@ test('pregnancy calculator supports USG and ultrasound EDD dating', () => {
 test('OTP signup verification accepts mysql2 JSON objects without JSON.parse errors', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'authController.js'), 'utf8');
   assert.match(source, /typeof record\.payload === 'string'/);
+  assert.match(source, /\? JSON\.parse\(record\.payload \|\| '\{\}'\)/);
   assert.match(source, /:\s*\(record\.payload \|\| \{\}\)/);
+  assert.doesNotMatch(source, /const payload = JSON\.parse\(record\.payload/);
 });
 
 test('USG dating migration and Bengali prescription rows are present', () => {
