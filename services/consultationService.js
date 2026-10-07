@@ -92,6 +92,11 @@ async function getConsultationContext(visitId) {
      WHERE doctor_id = :doctorId ORDER BY updated_at DESC, complaint ASC LIMIT 200`,
     { doctorId }
   );
+  const [clinicalFindingSuggestions] = await pool.execute(
+    `SELECT id, finding FROM doctor_clinical_finding_suggestions
+     WHERE doctor_id = :doctorId ORDER BY updated_at DESC, finding ASC LIMIT 200`,
+    { doctorId }
+  );
 
   const [personalHistoryRows] = await pool.execute(
     `SELECT personal_history, complementary_requested FROM opd_consultations
@@ -204,6 +209,7 @@ async function getConsultationContext(visitId) {
     invoice: invoice || null,
     pregnancyCalculation,
     complaintSuggestions,
+    clinicalFindingSuggestions,
     personalHistory,
     complementaryRequested: Boolean(personalHistoryRows[0]?.complementary_requested || consultation?.complementary_requested),
     labTests,
@@ -250,8 +256,8 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           personal_history = :personalHistory, complementary_requested = :complementaryRequested,
           complementary_requested_at = CASE WHEN :complementaryRequested = 1 THEN COALESCE(complementary_requested_at, NOW()) ELSE NULL END,
           complementary_requested_by = CASE WHEN :complementaryRequested = 1 THEN :actorUserId ELSE NULL END,
-          clinical_notes = :notes, diagnosis = :diagnosis, investigation_advice = :advice,
-          follow_up_date = :followUp WHERE id = :id`,
+          clinical_notes = :notes, diagnosis = :diagnosis, investigation_advice = :investigationAdvice,
+          advice = :advice, follow_up_date = :followUp WHERE id = :id`,
         {
           complaints: payload.complaints || null,
           symptoms: payload.symptoms || null,
@@ -260,7 +266,8 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           actorUserId,
           notes: payload.clinicalNotes || null,
           diagnosis: payload.diagnosis || null,
-          advice: payload.investigationAdvice || null,
+          investigationAdvice: payload.investigationAdvice || null,
+          advice: payload.advice || null,
           followUp: payload.followUpDate || null,
           id: existing.id
         }
@@ -270,11 +277,11 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
       const [result] = await conn.execute(
         `INSERT INTO opd_consultations
           (visit_id, complaints, symptoms, personal_history, complementary_requested, complementary_requested_at, complementary_requested_by,
-           clinical_notes, diagnosis, investigation_advice, follow_up_date, created_by)
+           clinical_notes, diagnosis, investigation_advice, advice, follow_up_date, created_by)
          VALUES (:visitId, :complaints, :symptoms, :personalHistory, :complementaryRequested,
                  CASE WHEN :complementaryRequested = 1 THEN NOW() ELSE NULL END,
                  CASE WHEN :complementaryRequested = 1 THEN :actorUserId ELSE NULL END,
-                 :notes, :diagnosis, :advice, :followUp, :createdBy)`,
+                 :notes, :diagnosis, :investigationAdvice, :advice, :followUp, :createdBy)`,
         {
           visitId,
           complaints: payload.complaints || null,
@@ -284,7 +291,8 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           actorUserId,
           notes: payload.clinicalNotes || null,
           diagnosis: payload.diagnosis || null,
-          advice: payload.investigationAdvice || null,
+          investigationAdvice: payload.investigationAdvice || null,
+          advice: payload.advice || null,
           followUp: payload.followUpDate || null,
           createdBy: actorUserId
         }

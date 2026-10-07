@@ -125,7 +125,7 @@
           <div class="d-flex justify-content-between align-items-center"><label class="form-label mb-1">Clinical Findings</label><span class="badge text-bg-light border">Press Enter to add</span></div>
           <input type="hidden" name="clinicalNotes" id="clinicalFindingsValue">
           <div id="clinicalFindingsTags" class="d-flex flex-wrap gap-2 mb-2"></div>
-          <% if (canEdit) { %><input type="text" id="clinicalFindingsInput" class="form-control" placeholder="Enter examination / clinical finding and press Enter..."><% } %>
+          <% if (canEdit) { %><div class="position-relative"><input type="text" id="clinicalFindingsInput" class="form-control" autocomplete="off" placeholder="Enter examination / clinical finding and press Enter..."><div id="clinicalFindingsSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:20;display:none;max-height:220px;overflow:auto;"></div></div><div class="small text-muted mt-1">Your saved clinical finding suggestions will appear here.</div><% } %>
         </div>
 
         <h6 class="text-uppercase text-muted small mt-4 mb-2">Vitals <span class="badge text-bg-primary-subtle text-primary">Doctor editable</span></h6>
@@ -163,8 +163,9 @@
         </div>
 
         <div class="row g-3">
-          <div class="col-md-8"><label class="form-label">Investigation Advice</label><textarea name="investigationAdvice" class="form-control" rows="2" <%= !canEdit ? 'readonly' : '' %>><%= c.investigation_advice || '' %></textarea></div>
-          <div class="col-md-4"><label class="form-label">Follow-up Date</label><input type="date" name="followUpDate" class="form-control" value="<%= c.follow_up_date || '' %>" <%= !canEdit ? 'readonly' : '' %>></div>
+          <div class="col-md-6"><label class="form-label">Investigation Advice</label><textarea name="investigationAdvice" class="form-control" rows="2" <%= !canEdit ? 'readonly' : '' %>><%= c.investigation_advice || '' %></textarea></div>
+          <div class="col-md-3"><label class="form-label">Advice</label><textarea name="advice" class="form-control" rows="2" <%= !canEdit ? 'readonly' : '' %>><%= c.advice || '' %></textarea></div>
+          <div class="col-md-3"><label class="form-label">Follow-up Date</label><input type="date" name="followUpDate" class="form-control" value="<%= c.follow_up_date || '' %>" <%= !canEdit ? 'readonly' : '' %>></div>
         </div>
 
         <hr class="my-4">
@@ -313,17 +314,18 @@
 
 <script>
 (function(){
-  const value=document.getElementById('complaintValue'),tags=document.getElementById('complaintTags'),input=document.getElementById('complaintInput'),box=document.getElementById('complaintSuggestions'),form=document.getElementById('consultationRxForm'),historyValue=document.getElementById('personalHistoryValue'),clinicalValue=document.getElementById('clinicalFindingsValue'),clinicalTags=document.getElementById('clinicalFindingsTags'),clinicalInput=document.getElementById('clinicalFindingsInput');
+  const value=document.getElementById('complaintValue'),tags=document.getElementById('complaintTags'),input=document.getElementById('complaintInput'),box=document.getElementById('complaintSuggestions'),form=document.getElementById('consultationRxForm'),historyValue=document.getElementById('personalHistoryValue'),clinicalValue=document.getElementById('clinicalFindingsValue'),clinicalTags=document.getElementById('clinicalFindingsTags'),clinicalInput=document.getElementById('clinicalFindingsInput'),clinicalBox=document.getElementById('clinicalFindingsSuggestions');
   if(!form)return;
   let complaints=<%- JSON.stringify(String(c.complaints || visit.reason || '').split(/[,;]+/).map(x=>x.trim()).filter(Boolean)) %>;
   const suggestions=<%- JSON.stringify((complaintSuggestions || []).map(x=>x.complaint)) %>;
+  const clinicalSuggestions=<%- JSON.stringify((clinicalFindingSuggestions || []).map(x=>x.finding)) %>;
   const ph=<%- JSON.stringify(personalHistory || {}) %>;
   function esc(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
   function sync(){complaints=[...new Set(complaints.map(x=>x.trim()).filter(Boolean))];value.value=complaints.join('; ');tags.innerHTML=complaints.map((x,i)=>'<span class="badge rounded-pill text-bg-primary d-inline-flex align-items-center gap-1">'+esc(x)+'<button type="button" class="btn-close btn-close-white btn-sm complaint-remove" data-index="'+i+'"></button></span>').join('');}
   function add(raw,save){const x=String(raw||'').trim().replace(/\s+/g,' ');if(!x||complaints.some(c=>c.toLowerCase()===x.toLowerCase()))return;complaints.push(x);sync();if(save)fetch('/doctor/complaints/suggestions',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({_csrf:'<%= csrfToken %>',complaint:x})}).catch(()=>{});}
   function render(q){if(!box)return;const list=suggestions.filter(x=>!complaints.some(c=>c.toLowerCase()===x.toLowerCase())&&(!q||x.toLowerCase().includes(q.toLowerCase()))).slice(0,12);box.innerHTML=list.map(x=>'<button type="button" class="list-group-item list-group-item-action complaint-suggestion">'+esc(x)+'</button>').join('');box.style.display=list.length?'block':'none';}
   if(input){input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add(input.value,true);input.value='';render('');}});input.addEventListener('input',()=>render(input.value));input.addEventListener('focus',()=>render(input.value));}
-  document.addEventListener('click',e=>{if(e.target.classList.contains('complaint-remove')){complaints.splice(Number(e.target.dataset.index),1);sync();}if(e.target.classList.contains('complaint-suggestion')){add(e.target.textContent,false);input.value='';render('');}if(box&&!box.contains(e.target)&&e.target!==input)box.style.display='none';});
+  document.addEventListener('click',e=>{if(e.target.classList.contains('complaint-remove')){complaints.splice(Number(e.target.dataset.index),1);sync();}if(e.target.classList.contains('complaint-suggestion')){add(e.target.textContent,false);input.value='';render('');}if(e.target.classList.contains('clinical-suggestion')){addFinding(e.target.textContent,false);clinicalInput.value='';renderClinical('');}if(box&&!box.contains(e.target)&&e.target!==input)box.style.display='none';if(clinicalBox&&!clinicalBox.contains(e.target)&&e.target!==clinicalInput)clinicalBox.style.display='none';});
   function setupOther(sid,iid){const s=document.getElementById(sid),i=document.getElementById(iid);if(!s||!i)return;const u=()=>{i.style.display=(s.value==='YES'||s.value==='OTHER')?'block':'none';};s.addEventListener('change',u);u();}
   setupOther('phSurgery','phSurgeryOther');setupOther('phSleep','phSleepOther');setupOther('phDrinking','phDrinkingOther');setupOther('phBowel','phBowelOther');
   const custom=document.getElementById('customHistoryItems');
@@ -342,8 +344,9 @@
   }
   let findings=<%- JSON.stringify(String(c.clinical_notes || '').split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean)) %>;
   function syncFindings(){findings=[...new Set(findings.map(x=>x.trim()).filter(Boolean))];if(clinicalValue)clinicalValue.value=findings.join('; ');if(clinicalTags)clinicalTags.innerHTML=findings.map((x,i)=>'<span class="badge rounded-pill text-bg-success d-inline-flex align-items-center gap-1">'+esc(x)+'<button type="button" class="btn-close btn-close-white btn-sm finding-remove" data-index="'+i+'"></button></span>').join('');}
-  function addFinding(raw){const x=String(raw||'').trim().replace(/\s+/g,' ');if(!x||findings.some(c=>c.toLowerCase()===x.toLowerCase()))return;findings.push(x);syncFindings();}
-  if(clinicalInput){clinicalInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFinding(clinicalInput.value);clinicalInput.value='';}});}
+  function addFinding(raw,save){const x=String(raw||'').trim().replace(/\s+/g,' ');if(!x||findings.some(c=>c.toLowerCase()===x.toLowerCase()))return;findings.push(x);syncFindings();if(save)fetch('/doctor/clinical-findings/suggestions',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({_csrf:'<%= csrfToken %>',finding:x})}).catch(()=>{});}
+  function renderClinical(q){if(!clinicalBox)return;const list=clinicalSuggestions.filter(x=>!findings.some(c=>c.toLowerCase()===x.toLowerCase())&&(!q||x.toLowerCase().includes(q.toLowerCase()))).slice(0,12);clinicalBox.innerHTML=list.map(x=>'<button type="button" class="list-group-item list-group-item-action clinical-suggestion">'+esc(x)+'</button>').join('');clinicalBox.style.display=list.length?'block':'none';}
+  if(clinicalInput){clinicalInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFinding(clinicalInput.value,true);clinicalInput.value='';renderClinical('');}});clinicalInput.addEventListener('input',()=>renderClinical(clinicalInput.value));clinicalInput.addEventListener('focus',()=>renderClinical(clinicalInput.value));}
   document.addEventListener('click',e=>{if(e.target.classList.contains('finding-remove')){findings.splice(Number(e.target.dataset.index),1);syncFindings();}});
   syncFindings();
   form.addEventListener('submit',()=>{syncHistory();syncFindings();});custom.addEventListener('input',syncHistory);custom.addEventListener('click',e=>{if(e.target.classList.contains('ph-remove')){e.target.closest('.col-md-6').remove();syncHistory();}});
