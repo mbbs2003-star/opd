@@ -46,4 +46,11 @@ SET @sql = (
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-CREATE INDEX IF NOT EXISTS idx_appointments_pregnancy_dating ON appointments (pregnancy_dating_method);
+SET @sql = (
+  SELECT IF(COUNT(*) = 0,
+    'CREATE INDEX idx_appointments_pregnancy_dating ON appointments (pregnancy_dating_method)',
+    'SELECT 1')
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND INDEX_NAME = 'idx_appointments_pregnancy_dating'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
