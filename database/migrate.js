@@ -119,7 +119,11 @@ async function run() {
   }
 }
 
-run().catch((err) => {
-  console.error('[migrate] Failed:', err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  run().catch((err) => {
+    console.error('[migrate] Failed:', err.message);
+    process.exit(1);
+  });
+} else {
+  module.exports = { run };
+}
