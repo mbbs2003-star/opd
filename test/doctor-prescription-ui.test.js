@@ -45,12 +45,12 @@ test('pregnancy calculator supports USG and ultrasound EDD dating', () => {
   assert.equal(usg.referenceMode, 'USG');
   assert.equal(usg.gestationalAgeWeeks, 12);
   assert.equal(usg.gestationalAgeDays, 3);
-  assert.equal(usg.estimatedDueDate, '2027-03-22');
+  assert.equal(usg.estimatedDueDate, '2027-04-19');
 
-  const usgEdd = calc.calculatePregnancyFromUltrasoundEdd('2027-03-22', new Date(2026, 9, 8));
+  const usgEdd = calc.calculatePregnancyFromUltrasoundEdd('2027-04-19', new Date(2026, 9, 8));
   assert.ok(usgEdd);
   assert.equal(usgEdd.referenceMode, 'USG_EDD');
-  assert.equal(usgEdd.estimatedDueDate, '2027-03-22');
+  assert.equal(usgEdd.estimatedDueDate, '2027-04-19');
 });
 
 test('USG dating migration and Bengali prescription rows are present', () => {
