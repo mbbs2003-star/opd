@@ -174,8 +174,6 @@ async function getConsultationContext(visitId) {
     } else if (pregnancyMethod === 'USG_EDD') {
       pregnancyCalculation = calculatePregnancyFromUltrasoundEdd(visit.usg_edd);
     } else if (pregnancyMethod === 'CONCEPTION') {
-      pregnancyCalculation = calculatePregnancyFromReference(visit.lmp_date, 'LMP');
-    } else if (pregnancyMethod === 'CONCEPTION') {
       pregnancyCalculation = calculatePregnancy(visit.lmp_date);
       if (pregnancyCalculation) {
         const conceptionDate = new Date(pregnancyCalculation.lmpDate + 'T00:00:00');
