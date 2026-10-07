@@ -29,9 +29,11 @@ async function dashboard(req, res, next) {
 
     const [upcoming] = await pool.execute(
       `SELECT a.id, a.appointment_date, a.slot_time, a.token_number,
-              p.health_id, p.name AS patient_name, p.age_years, p.gender
+              p.health_id, p.name AS patient_name, p.age_years, p.gender,
+              a.referral_code, rp.provider_name AS referral_provider_name
        FROM appointments a
        JOIN patients p ON p.id = a.patient_id
+       LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
        WHERE a.doctor_id = :doctorId AND a.appointment_date > :date
          AND a.status IN ('BOOKED','RESCHEDULED')
        ORDER BY a.appointment_date, a.slot_time LIMIT 15`,
