@@ -166,18 +166,19 @@
   <!-- HISTORY -->
   <div class="tab-pane fade card-body" id="history">
     <table class="table table-sm">
-      <thead><tr><th>Date</th><th>Patient</th><th>Health ID</th><th>Diagnosis</th><th>Status</th></tr></thead>
+      <thead><tr><th>Date</th><th>Patient</th><th>Health ID</th><th>Referral</th><th>Diagnosis</th><th>Status</th></tr></thead>
       <tbody>
         <% opdHistory.forEach(function(v) { %>
           <tr>
             <td><%= new Date(v.checked_in_at).toLocaleString() %></td>
             <td><%= v.patient_name %></td>
             <td><code><%= v.health_id %></code></td>
+            <td><strong><%= v.referral_code || '—' %></strong><div class="small text-muted"><%= v.referral_provider_name || '' %></div></td>
             <td><%= v.diagnosis || '—' %></td>
             <td><%= v.status %></td>
           </tr>
         <% }) %>
-        <% if (opdHistory.length === 0) { %><tr><td colspan="5" class="text-muted text-center py-3">No consultations recorded.</td></tr><% } %>
+        <% if (opdHistory.length === 0) { %><tr><td colspan="6" class="text-muted text-center py-3">No consultations recorded.</td></tr><% } %>
       </tbody>
     </table>
   </div>
