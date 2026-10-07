@@ -66,3 +66,12 @@ test('referral service normalizes provider codes consistently', () => {
   assert.equal(referralService.normalizeCode('abc__123'), 'ABC__123');
   assert.equal(referralService.normalizeCode(''), '');
 });
+
+test('startup migration runner is import-safe and server invokes pending migrations', () => {
+  const migrationSource = read('database/migrate.js');
+  assert.match(migrationSource, /if \(require\.main === module\)/);
+  assert.match(migrationSource, /module\.exports = \{ run \}/);
+  const serverSource = read('server.js');
+  assert.match(serverSource, /runMigrations/);
+  assert.match(serverSource, /await runMigrations\(\)/);
+});
