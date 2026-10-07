@@ -29,19 +29,20 @@
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Invoice</th><th>Patient</th><th>Amount</th><th>Discount</th><th>Method</th><th>Status</th></tr></thead>
+      <thead><tr><th>Invoice</th><th>Patient</th><th>Referral</th><th>Amount</th><th>Discount</th><th>Method</th><th>Status</th></tr></thead>
       <tbody>
         <% rows.forEach(function(r) { %>
           <tr>
             <td><%= r.invoice_number %></td>
             <td><%= r.patient_name %><div class="text-muted small"><%= r.health_id %></div></td>
+            <td><strong><%= r.referral_code || '—' %></strong><div class="text-muted small"><%= r.referral_provider_name || '' %></div></td>
             <td>₹<%= Number(r.net_amount).toFixed(2) %></td>
             <td>₹<%= Number(r.discount_amount).toFixed(2) %></td>
             <td><%= r.payment_method || '—' %></td>
             <td><span class="badge text-bg-<%= r.status === 'PAID' ? 'success' : 'secondary' %>"><%= r.status.replace('_',' ') %></span></td>
           </tr>
         <% }) %>
-        <% if (rows.length === 0) { %><tr><td colspan="6" class="text-center text-muted py-4">No invoices for this range.</td></tr><% } %>
+        <% if (rows.length === 0) { %><tr><td colspan="7" class="text-center text-muted py-4">No invoices for this range.</td></tr><% } %>
       </tbody>
     </table>
   </div>
