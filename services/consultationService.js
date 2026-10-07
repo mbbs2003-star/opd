@@ -166,11 +166,19 @@ async function getConsultationContext(visitId) {
     selectedLabTestIds = selectedRows.map((r) => Number(r.test_id));
   }
 
-  const { calculatePregnancy } = require('../utils/pregnancyCalculator');
-  const pregnancyCalculation = String(visit.gender || '').toLowerCase() === 'female' &&
-    visit.pregnancy_status === 'PREGNANT' && visit.lmp_date
-    ? calculatePregnancy(visit.lmp_date)
-    : null;
+  const pregnancyMethod = String(visit.pregnancy_dating_method || 'LMP').toUpperCase();
+  let pregnancyCalculation = null;
+  if (String(visit.gender || '').toLowerCase() === 'female' && visit.pregnancy_status === 'PREGNANT') {
+    if (pregnancyMethod === 'USG') {
+      pregnancyCalculation = calculatePregnancyFromUltrasound(visit.usg_date, visit.usg_gestational_age_weeks, visit.usg_gestational_age_days);
+    } else if (pregnancyMethod === 'USG_EDD') {
+      pregnancyCalculation = calculatePregnancyFromUltrasoundEdd(visit.usg_edd);
+    } else if (pregnancyMethod === 'CONCEPTION') {
+      pregnancyCalculation = calculatePregnancyFromReference(visit.lmp_date, 'LMP');
+    } else {
+      pregnancyCalculation = calculatePregnancy(visit.lmp_date);
+    }
+  }
 
   return {
     visit,
