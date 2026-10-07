@@ -71,13 +71,22 @@ async function bookAppointment(payload, actorUserId) {
     let referralProviderId = patient.referral_provider_id || null;
     if (payload.referralCode) {
       const normalized = referralService.normalizeCode(payload.referralCode);
-      const [[provider]] = await conn.execute(
-        'SELECT id, referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',
-        { code: normalized }
-      );
-      if (!provider) throw new AppError('The selected referral code is invalid or inactive.', 422);
-      referralCode = provider.referral_code;
-      referralProviderId = provider.id;
+      if (
+        referralProviderId &&
+        referralCode &&
+        referralService.normalizeCode(referralCode) === normalized
+      ) {
+        // Existing patient attribution is historical and remains usable even
+        // after the provider is deactivated. This does not allow a new code.
+      } else {
+        const [[provider]] = await conn.execute(
+          'SELECT id, referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',
+          { code: normalized }
+        );
+        if (!provider) throw new AppError('The selected referral code is invalid or inactive.', 422);
+        referralCode = provider.referral_code;
+        referralProviderId = provider.id;
+      }
     }
     const obstetric = isFemale
       ? calculatePregnancy(payload.lmpDate, obstetricStatus, appointmentDate)
