@@ -175,6 +175,20 @@ async function getConsultationContext(visitId) {
       pregnancyCalculation = calculatePregnancyFromUltrasoundEdd(visit.usg_edd);
     } else if (pregnancyMethod === 'CONCEPTION') {
       pregnancyCalculation = calculatePregnancyFromReference(visit.lmp_date, 'LMP');
+    } else if (pregnancyMethod === 'CONCEPTION') {
+      pregnancyCalculation = calculatePregnancy(visit.lmp_date);
+      if (pregnancyCalculation) {
+        const conceptionDate = new Date(pregnancyCalculation.lmpDate + 'T00:00:00');
+        conceptionDate.setDate(conceptionDate.getDate() + 14);
+        pregnancyCalculation.referenceMode = 'CONCEPTION';
+        pregnancyCalculation.referenceDate = conceptionDate.toISOString().slice(0, 10);
+      }
+    } else if (pregnancyMethod === 'EDD') {
+      pregnancyCalculation = calculatePregnancy(visit.lmp_date);
+      if (pregnancyCalculation) {
+        pregnancyCalculation.referenceMode = 'EDD';
+        pregnancyCalculation.referenceDate = pregnancyCalculation.estimatedDueDate;
+      }
     } else {
       pregnancyCalculation = calculatePregnancy(visit.lmp_date);
     }
