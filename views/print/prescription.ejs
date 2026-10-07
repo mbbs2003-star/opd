@@ -117,7 +117,8 @@
       </section>
 
       <% if (prescription.rx_notes) { %><section><h3>Rx Notes</h3><p><%= prescription.rx_notes %></p></section><% } %>
-      <% if (hasInvestigations) { %><section><h3>Suggested Investigations</h3><p><%= prescription.investigation_advice %></p></section><% } %>
+      <% if (prescription.advice) { %><div class="clinical-block"><strong>Advice:</strong> <%= prescription.advice %></div><% } %>
+  <% if (hasInvestigations) { %><section><h3>Suggested Investigations</h3><p><%= prescription.investigation_advice %></p></section><% } %>
     </div>
   </div>
 
