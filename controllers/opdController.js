@@ -48,6 +48,13 @@ async function book(req, res, next) {
         para: req.body.para,
         abortions: req.body.abortions,
         pregnancyStatus: req.body.pregnancyStatus,
+        pregnancyDatingMethod: req.body.pregnancyDatingMethod,
+        conceptionDate: req.body.conceptionDate,
+        referenceDate: req.body.referenceDate,
+        usgDate: req.body.usgDate,
+        usgGestationalAgeWeeks: req.body.usgGestationalAgeWeeks,
+        usgGestationalAgeDays: req.body.usgGestationalAgeDays,
+        usgEdd: req.body.usgEdd,
         obstetricNotes: req.body.obstetricNotes
       },
       req.user.id
@@ -364,23 +371,35 @@ async function saveVitals(req, res, next) {
         : null;
       const para = req.body.para === '' ? null : Math.max(0, parseInt(req.body.para, 10) || 0);
       const abortions = req.body.abortions === '' ? null : Math.max(0, parseInt(req.body.abortions, 10) || 0);
-      const lmpDate = req.body.lmpDate || null;
-
-      const { calculatePregnancy } = require('../utils/pregnancyCalculator');
-      const calculation = status === 'PREGNANT' ? calculatePregnancy(lmpDate) : null;
+      const { calculatePregnancy, calculatePregnancyFromReference, calculatePregnancyFromUltrasound, calculatePregnancyFromUltrasoundEdd } = require('../utils/pregnancyCalculator');
+      const datingMethod = String(req.body.pregnancyDatingMethod || 'LMP').toUpperCase();
+      let calculation = null;
+      if (status === 'PREGNANT') {
+        if (datingMethod === 'USG') calculation = calculatePregnancyFromUltrasound(req.body.usgDate, req.body.usgGestationalAgeWeeks, req.body.usgGestationalAgeDays);
+        else if (datingMethod === 'USG_EDD') calculation = calculatePregnancyFromUltrasoundEdd(req.body.usgEdd);
+        else if (datingMethod === 'CONCEPTION') calculation = calculatePregnancyFromReference(req.body.conceptionDate, 'CONCEPTION');
+        else if (datingMethod === 'EDD') calculation = calculatePregnancyFromReference(req.body.referenceDate, 'EDD');
+        else calculation = calculatePregnancy(req.body.lmpDate);
+      }
       if (status === 'PREGNANT' && !calculation) {
-        throw new AppError('Invalid pregnancy input: please enter a valid LMP date that is not in the future.', 400);
+        throw new AppError('Invalid pregnancy dating input. Check the LMP/conception/EDD or USG/ultrasound report values.', 400);
       }
 
       await pool.execute(
         `UPDATE appointments SET
            lmp_date = :lmpDate, gravida = :gravida, para = :para, abortions = :abortions,
-           pregnancy_status = :pregnancyStatus,
+           pregnancy_status = :pregnancyStatus, pregnancy_dating_method = :datingMethod,
+           usg_date = :usgDate, usg_gestational_age_weeks = :usgWeeks, usg_gestational_age_days = :usgDays, usg_edd = :usgEdd,
            gestational_age_weeks = :weeks, gestational_age_days = :days,
            estimated_due_date = :edd, obstetric_notes = :notes
          WHERE id = :appointmentId`,
         {
-          lmpDate,
+          lmpDate: calculation ? calculation.lmpDate : null,
+          datingMethod: status === 'PREGNANT' ? datingMethod : null,
+          usgDate: status === 'PREGNANT' && datingMethod.startsWith('USG') ? (req.body.usgDate || null) : null,
+          usgWeeks: status === 'PREGNANT' && datingMethod === 'USG' ? Number(req.body.usgGestationalAgeWeeks) : null,
+          usgDays: status === 'PREGNANT' && datingMethod === 'USG' ? Number(req.body.usgGestationalAgeDays || 0) : null,
+          usgEdd: status === 'PREGNANT' && datingMethod === 'USG_EDD' ? (req.body.usgEdd || null) : null,
           gravida,
           para,
           abortions,
