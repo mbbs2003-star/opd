@@ -50,6 +50,7 @@
 
   <div class="rx-clinical-grid">
     <div class="rx-left">
+      <% if (prescription.advice) { %><section><h3>Advice</h3><p><%= prescription.advice %></p></section><% } %>
       <% if (hasComplaint) { %><section><h3>Chief Complaint</h3><p><%= prescription.complaints %></p></section><% } %>
 
       <% if (hasHistory) { %>
@@ -109,7 +110,8 @@
               <td><%= it.instructions || it.route || '—' %></td>
             </tr>
             <tr class="rx-bengali-row">
-              <td colspan="6"><span class="rx-bengali-label">বাংলা নির্দেশনা:</span> <%= it.prescriptionText && it.prescriptionText.bengali ? it.prescriptionText.bengali : 'ওষুধটি চিকিৎসকের নির্দেশ অনুযায়ী সেবন করুন।' %></td>
+              <td colspan="2"></td>
+              <td colspan="4"><span class="rx-bengali-label">বাংলা নির্দেশনা:</span> <%= it.prescriptionText && it.prescriptionText.bengali ? it.prescriptionText.bengali : 'ওষুধটি চিকিৎসকের নির্দেশ অনুযায়ী সেবন করুন।' %></td>
             </tr>
           <% }) %>
           </tbody>
@@ -117,8 +119,7 @@
       </section>
 
       <% if (prescription.rx_notes) { %><section><h3>Rx Notes</h3><p><%= prescription.rx_notes %></p></section><% } %>
-      <% if (prescription.advice) { %><div class="clinical-block"><strong>Advice:</strong> <%= prescription.advice %></div><% } %>
-  <% if (hasInvestigations) { %><section><h3>Suggested Investigations</h3><p><%= prescription.investigation_advice %></p></section><% } %>
+      <% if (hasInvestigations) { %><section><h3>Suggested Investigations</h3><p><%= prescription.investigation_advice %></p></section><% } %>
     </div>
   </div>
 
