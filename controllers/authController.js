@@ -136,16 +136,7 @@ async function verifySignup(req, res, next) {
   try {
     const email = String(req.body.email || req.session.signupEmail || '').trim().toLowerCase();
     const record = await patientAuthService.consumeOtp('SIGNUP', email, req.body.otp);
-    // MySQL JSON columns may already be returned as objects by mysql2.
-    // Parsing an object causes: Unexpected token o in JSON at position 1.
-    let payload;
-    try {
-      payload = typeof record.payload === 'string'
-        ? JSON.parse(record.payload || '{}')
-        : (record.payload || {});
-    } catch (parseError) {
-      throw new AppError('Signup verification data is invalid. Please request a new code.', 422);
-    }
+    const payload = JSON.parse(record.payload || '{}');
     if (!payload.name || !payload.mobile || !payload.passwordHash) throw new AppError('Signup session is incomplete. Please start again.', 422);
     const patient = await patientAuthService.createPatientFromSignup(payload);
     delete req.session.signupEmail;

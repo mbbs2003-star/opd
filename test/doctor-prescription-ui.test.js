@@ -53,6 +53,12 @@ test('pregnancy calculator supports USG and ultrasound EDD dating', () => {
   assert.equal(usgEdd.estimatedDueDate, '2027-04-19');
 });
 
+test('OTP signup verification accepts mysql2 JSON objects without JSON.parse errors', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'authController.js'), 'utf8');
+  assert.match(source, /typeof record\.payload === 'string'/);
+  assert.match(source, /:\s*\(record\.payload \|\| \{\}\)/);
+});
+
 test('USG dating migration and Bengali prescription rows are present', () => {
   const migration = fs.readFileSync(path.join(__dirname, '..', 'database', 'migrations', '1007_ultrasound_pregnancy_dating.sql'), 'utf8');
   for (const field of ['pregnancy_dating_method', 'usg_date', 'usg_gestational_age_weeks', 'usg_gestational_age_days', 'usg_edd']) {
