@@ -3,6 +3,12 @@ const auditService = require('./auditService');
 const AppError = require('../utils/AppError');
 const labService = require('./labService');
 const prescriptionService = require('./prescriptionService');
+const {
+  calculatePregnancy,
+  calculatePregnancyFromReference,
+  calculatePregnancyFromUltrasound,
+  calculatePregnancyFromUltrasoundEdd
+} = require('../utils/pregnancyCalculator');
 
 /**
  * Doctor-scope authorization guard. A doctor may only open visits
@@ -26,7 +32,7 @@ async function getConsultationContext(visitId) {
   const [[visit]] = await pool.execute(
     `SELECT v.*, a.appointment_code, a.token_number, a.slot_time, a.appointment_date, a.reason,
             p.id AS patient_id, p.health_id, p.name AS patient_name, p.gender, p.age_years, p.dob, p.mobile,
-            a.lmp_date, a.gravida, a.para, a.abortions, a.pregnancy_status, a.gestational_age_weeks, a.gestational_age_days, a.estimated_due_date, a.obstetric_notes,
+            a.lmp_date, a.gravida, a.para, a.abortions, a.pregnancy_status, a.pregnancy_dating_method, a.usg_date, a.usg_gestational_age_weeks, a.usg_gestational_age_days, a.usg_edd, a.gestational_age_weeks, a.gestational_age_days, a.estimated_due_date, a.obstetric_notes,
             m.blood_group, m.allergies, m.existing_conditions, m.height_cm AS profile_height, m.weight_kg AS profile_weight,
             u.name AS doctor_name, dept.name AS department_name
      FROM opd_visits v
@@ -308,17 +314,34 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
         ? payload.pregnancyStatus
         : (isFemale ? 'UNKNOWN' : null);
 
+      let datingCalculation = null;
+      const datingMethod = String(payload.pregnancyDatingMethod || 'LMP').toUpperCase();
       if (pregnancyStatus === 'PREGNANT') {
-        const { calculatePregnancy } = require('../utils/pregnancyCalculator');
-        const calculation = calculatePregnancy(payload.lmpDate);
-        if (!calculation) {
-          throw new AppError('Invalid pregnancy input: please enter a valid LMP date that is not in the future.', 400);
+        if (datingMethod === 'USG') {
+          datingCalculation = calculatePregnancyFromUltrasound(
+            payload.usgDate,
+            payload.usgGestationalAgeWeeks,
+            payload.usgGestationalAgeDays
+          );
+        } else if (datingMethod === 'USG_EDD') {
+          datingCalculation = calculatePregnancyFromUltrasoundEdd(payload.usgEdd);
+        } else if (datingMethod === 'CONCEPTION') {
+          datingCalculation = calculatePregnancyFromReference(payload.conceptionDate, 'CONCEPTION');
+        } else if (datingMethod === 'EDD') {
+          datingCalculation = calculatePregnancyFromReference(payload.referenceDate || payload.lmpDate, 'EDD');
+        } else {
+          datingCalculation = calculatePregnancy(payload.lmpDate);
         }
-        payload.gestationalAgeWeeks = calculation.gestationalAgeWeeks;
-        payload.gestationalAgeDays = calculation.gestationalAgeDays;
-        payload.estimatedDueDate = calculation.estimatedDueDate;
+        if (!datingCalculation) {
+          throw new AppError('Invalid pregnancy dating input. Check the LMP/conception/EDD or USG/ultrasound report values.', 400);
+        }
+        payload.lmpDate = datingCalculation.lmpDate;
+        payload.gestationalAgeWeeks = datingCalculation.gestationalAgeWeeks;
+        payload.gestationalAgeDays = datingCalculation.gestationalAgeDays;
+        payload.estimatedDueDate = datingCalculation.estimatedDueDate;
       } else {
         payload.gravida = null;
+        payload.lmpDate = null;
         payload.gestationalAgeWeeks = null;
         payload.gestationalAgeDays = null;
         payload.estimatedDueDate = null;
@@ -331,6 +354,11 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
            para = :para,
            abortions = :abortions,
            pregnancy_status = :pregnancyStatus,
+           pregnancy_dating_method = :datingMethod,
+           usg_date = :usgDate,
+           usg_gestational_age_weeks = :usgWeeks,
+           usg_gestational_age_days = :usgDays,
+           usg_edd = :usgEdd,
            gestational_age_weeks = :gestationalWeeks,
            gestational_age_days = :gestationalDays,
            estimated_due_date = :estimatedDueDate,
