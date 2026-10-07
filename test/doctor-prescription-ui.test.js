@@ -36,3 +36,33 @@ test('Edit Consultation route forces edit mode instead of rendering finalized vi
   assert.match(view, /name="_editMode" value="<%= editMode \? '1' : '0' %>"/);
   assert.match(view, /href="\/doctor\/consultation\/<%= visit\.id %>\/edit"/);
 });
+
+
+test('pregnancy calculator supports USG and ultrasound EDD dating', () => {
+  const calc = require('../utils/pregnancyCalculator');
+  const usg = calc.calculatePregnancyFromUltrasound('2026-10-08', 12, 3, new Date(2026, 9, 8));
+  assert.ok(usg);
+  assert.equal(usg.referenceMode, 'USG');
+  assert.equal(usg.gestationalAgeWeeks, 12);
+  assert.equal(usg.gestationalAgeDays, 3);
+  assert.equal(usg.estimatedDueDate, '2027-03-22');
+
+  const usgEdd = calc.calculatePregnancyFromUltrasoundEdd('2027-03-22', new Date(2026, 9, 8));
+  assert.ok(usgEdd);
+  assert.equal(usgEdd.referenceMode, 'USG_EDD');
+  assert.equal(usgEdd.estimatedDueDate, '2027-03-22');
+});
+
+test('USG dating migration and Bengali prescription rows are present', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'database', 'migrations', '1007_ultrasound_pregnancy_dating.sql'), 'utf8');
+  for (const field of ['pregnancy_dating_method', 'usg_date', 'usg_gestational_age_weeks', 'usg_gestational_age_days', 'usg_edd']) {
+    assert.match(migration, new RegExp(field, 'i'));
+  }
+  const prescription = fs.readFileSync(path.join(__dirname, '..', 'views', 'print', 'prescription.ejs'), 'utf8');
+  assert.match(prescription, /rx-bengali-row/);
+  assert.match(prescription, /বাংলা নির্দেশনা/);
+  const textUtil = require('../utils/prescriptionText');
+  const result = textUtil.describeItem({ medicine_form: 'tablet', dosage: '1', frequency: 'BD', route: 'P/O', duration: '5', instructions: 'After food' });
+  assert.match(result.bengali, /দিনে ২ বার/);
+  assert.match(result.bengali, /খাবারের পরে/);
+});
