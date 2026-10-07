@@ -68,7 +68,8 @@ test('USG dating migration and Bengali prescription rows are present', () => {
   }
   const prescription = fs.readFileSync(path.join(__dirname, '..', 'views', 'print', 'prescription.ejs'), 'utf8');
   assert.match(prescription, /rx-bengali-row/);
-  assert.match(prescription, /বাংলা নির্দেশনা/);
+  assert.match(prescription, /<td colspan="2"><\/td>\s*<td colspan="4">/);
+  assert.match(prescription, /<div class="rx-left">[\\s\\S]*?if \(prescription\.advice\)/);
   const textUtil = require('../utils/prescriptionText');
   const result = textUtil.describeItem({ medicine_form: 'tablet', dosage: '1', frequency: 'BD', route: 'P/O', duration: '5', instructions: 'After food' });
   assert.match(result.bengali, /দিনে ২ বার/);
