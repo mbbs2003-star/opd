@@ -71,13 +71,22 @@ async function bookAppointment(payload, actorUserId) {
     let referralProviderId = patient.referral_provider_id || null;
     if (payload.referralCode) {
       const normalized = referralService.normalizeCode(payload.referralCode);
-      const [[provider]] = await conn.execute(
-        'SELECT id, referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',
-        { code: normalized }
-      );
-      if (!provider) throw new AppError('The selected referral code is invalid or inactive.', 422);
-      referralCode = provider.referral_code;
-      referralProviderId = provider.id;
+      if (
+        referralProviderId &&
+        referralCode &&
+        referralService.normalizeCode(referralCode) === normalized
+      ) {
+        // Existing patient attribution is historical and remains usable even
+        // after the provider is deactivated. This does not allow a new code.
+      } else {
+        const [[provider]] = await conn.execute(
+          'SELECT id, referral_code FROM referral_providers WHERE referral_code=:code AND is_active=1',
+          { code: normalized }
+        );
+        if (!provider) throw new AppError('The selected referral code is invalid or inactive.', 422);
+        referralCode = provider.referral_code;
+        referralProviderId = provider.id;
+      }
     }
     const obstetric = isFemale
       ? calculatePregnancy(payload.lmpDate, obstetricStatus, appointmentDate)
@@ -388,6 +397,7 @@ async function getQueue({ date, doctorId = null, branchId = null }) {
     `SELECT v.id AS visit_id, v.visit_code, v.status AS visit_status, v.checked_in_at,
             a.id AS appointment_id, a.token_number, a.slot_time, a.status AS appointment_status,
             p.id AS patient_id, p.health_id, p.name AS patient_name, p.age_years, p.gender,
+            a.referral_code, rp.provider_name AS referral_provider_name,
             u.name AS doctor_name, d.id AS doctor_id,
             i.id AS invoice_id, i.invoice_number, i.status AS payment_status, i.net_amount
      FROM opd_visits v
@@ -395,6 +405,7 @@ async function getQueue({ date, doctorId = null, branchId = null }) {
      JOIN patients p ON p.id = v.patient_id
      JOIN doctors d ON d.id = v.doctor_id
      JOIN users u ON u.id = d.user_id
+     LEFT JOIN referral_providers rp ON rp.id = a.referral_provider_id
      LEFT JOIN invoices i ON i.visit_id = v.id
      WHERE a.appointment_date = :date
        AND (:doctorId IS NULL OR v.doctor_id = :doctorId)

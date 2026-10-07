@@ -3,12 +3,13 @@
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Invoice</th><th>Patient</th><th>Requested</th><th>Reason</th><th>Requested By</th><th>When</th><th></th></tr></thead>
+      <thead><tr><th>Invoice</th><th>Patient</th><th>Referral</th><th>Requested</th><th>Reason</th><th>Requested By</th><th>When</th><th></th></tr></thead>
       <tbody>
         <% rows.forEach(function(dr) { %>
           <tr>
             <td><a href="/billing/invoices/<%= dr.invoice_id %>"><%= dr.invoice_number %></a></td>
             <td><%= dr.patient_name %><div class="text-muted small"><%= dr.health_id %></div></td>
+            <td><strong><%= dr.referral_code || '—' %></strong><div class="text-muted small"><%= dr.referral_provider_name || '' %></div></td>
             <td><%= dr.requested_amount ? '₹' + Number(dr.requested_amount).toFixed(2) : dr.requested_percentage + '%' %></td>
             <td><%= dr.reason %></td>
             <td><%= dr.requested_by_name %></td>
@@ -42,7 +43,7 @@
             </td>
           </tr>
         <% }) %>
-        <% if (rows.length === 0) { %><tr><td colspan="7" class="text-center text-muted py-4">No pending discount requests.</td></tr><% } %>
+        <% if (rows.length === 0) { %><tr><td colspan="8" class="text-center text-muted py-4">No pending discount requests.</td></tr><% } %>
       </tbody>
     </table>
   </div>

@@ -159,9 +159,11 @@ async function createInvoice(visitId, otherCharges, actorUserId) {
 async function getInvoice(invoiceId) {
   const [[invoice]] = await pool.execute(
     `SELECT i.*, p.health_id, p.name AS patient_name, p.age_years, p.gender,
+            p.referral_code, rp.provider_name AS referral_provider_name, rp.referral_code AS referral_provider_current_code,
             u.name AS doctor_name, dept.name AS department_name, b.name AS branch_name
      FROM invoices i
      JOIN patients p ON p.id = i.patient_id
+     LEFT JOIN referral_providers rp ON rp.id = p.referral_provider_id
      JOIN doctors d ON d.id = i.doctor_id
      JOIN users u ON u.id = d.user_id
      JOIN departments dept ON dept.id = i.department_id
@@ -195,9 +197,11 @@ async function listInvoices({ status = null, page = 1, pageSize = 25 }) {
   // re: mysql2's execute()+bound-LIMIT prepared-statement bug.
   const [rows] = await pool.query(
     `SELECT i.id, i.invoice_number, i.created_at, i.gross_amount, i.discount_amount, i.net_amount, i.status,
-            p.health_id, p.name AS patient_name, u.name AS doctor_name
+            p.health_id, p.name AS patient_name, p.referral_code, rp.provider_name AS referral_provider_name,
+            u.name AS doctor_name
      FROM invoices i
      JOIN patients p ON p.id = i.patient_id
+     LEFT JOIN referral_providers rp ON rp.id = p.referral_provider_id
      JOIN doctors d ON d.id = i.doctor_id
      JOIN users u ON u.id = d.user_id
      WHERE (:status IS NULL OR i.status = :status)
@@ -336,10 +340,12 @@ async function decideDiscount(discountRequestId, decision, actorUserId, rejectio
 async function listPendingDiscountRequests() {
   const [rows] = await pool.execute(
     `SELECT dr.*, i.invoice_number, i.gross_amount, i.net_amount,
-            p.name AS patient_name, p.health_id, ru.name AS requested_by_name
+            p.name AS patient_name, p.health_id, p.referral_code, rp.provider_name AS referral_provider_name,
+            ru.name AS requested_by_name
      FROM discount_requests dr
      JOIN invoices i ON i.id = dr.invoice_id
      JOIN patients p ON p.id = i.patient_id
+     LEFT JOIN referral_providers rp ON rp.id = p.referral_provider_id
      JOIN users ru ON ru.id = dr.requested_by
      WHERE dr.status = 'PENDING'
      ORDER BY dr.requested_at`

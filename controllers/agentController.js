@@ -83,7 +83,7 @@ async function bookOpd(req,res,next){
       abortions:req.body.abortions,
       pregnancyStatus:req.body.pregnancyStatus,
       obstetricNotes:req.body.obstetricNotes,
-      referralCode:(await agentService.requireReferralCode(req.body.referralCode)).referral_code
+      referralCode:(await agentService.resolveReferralForPatient(patient,req.body.referralCode)).referral_code
     },req.user.id);
     req.flash('success',`OPD booked for ${patient.name}. Token ${String(result.token).padStart(3,'0')} — ${result.appointmentCode}`);
     res.redirect('/agent/patients');
@@ -119,7 +119,7 @@ async function bookTest(req,res,next){
       bookingDate:req.body.bookingDate,
       priority:req.body.priority||'ROUTINE',
       clinicalNotes:req.body.clinicalNotes,
-      referralCode:agentService.requireReferralCode(req.body.referralCode,req.user.id)
+      referralCode:(await agentService.resolveReferralForPatient(patient,req.body.referralCode)).referral_code
     });
     req.flash('success',`Diagnostic booking ${result.orderCode} created for ${patient.name}.`);
     res.redirect('/agent/patients');

@@ -19,12 +19,13 @@
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Invoice</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Gross</th><th>Discount</th><th>Net</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Invoice</th><th>Patient</th><th>Referral</th><th>Doctor</th><th>Date</th><th>Gross</th><th>Discount</th><th>Net</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <% rows.forEach(function(i) { %>
           <tr>
             <td><code><%= i.invoice_number %></code></td>
             <td><%= i.patient_name %><div class="text-muted small"><%= i.health_id %></div></td>
+            <td><strong><%= i.referral_code || '—' %></strong><div class="text-muted small"><%= i.referral_provider_name || '' %></div></td>
             <td><%= i.doctor_name %></td>
             <td><%= new Date(i.created_at).toLocaleDateString() %></td>
             <td>₹<%= Number(i.gross_amount).toFixed(2) %></td>
@@ -34,7 +35,7 @@
             <td><a href="/billing/invoices/<%= i.id %>" class="btn btn-sm btn-outline-primary">Open</a></td>
           </tr>
         <% }) %>
-        <% if (rows.length === 0) { %><tr><td colspan="9" class="text-center text-muted py-4">No invoices found.</td></tr><% } %>
+        <% if (rows.length === 0) { %><tr><td colspan="10" class="text-center text-muted py-4">No invoices found.</td></tr><% } %>
       </tbody>
     </table>
   </div>

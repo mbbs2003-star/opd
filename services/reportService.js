@@ -58,10 +58,12 @@ async function doctorReport({ from, to, branchId = null }) {
 async function billingReport({ from, to, status = null }) {
   const [rows] = await pool.execute(
     `SELECT i.invoice_number, i.created_at, p.name AS patient_name, p.health_id,
+            p.referral_code, rp.provider_name AS referral_provider_name,
             i.gross_amount, i.discount_amount, i.net_amount, i.status,
             (SELECT pay.method FROM payments pay WHERE pay.invoice_id = i.id ORDER BY pay.paid_at DESC LIMIT 1) AS payment_method
      FROM invoices i
      JOIN patients p ON p.id = i.patient_id
+     LEFT JOIN referral_providers rp ON rp.id = p.referral_provider_id
      WHERE DATE(i.created_at) BETWEEN :from AND :to
        AND (:status IS NULL OR i.status = :status)
      ORDER BY i.created_at DESC`,

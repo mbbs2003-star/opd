@@ -40,7 +40,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead>
-        <tr><th>Token</th><th>Appointment</th><th>Patient</th><th>Doctor</th><th>Department</th><th>Date / Time</th><th>Status</th><th>Payment</th><th></th></tr>
+        <tr><th>Token</th><th>Appointment</th><th>Patient</th><th>Doctor</th><th>Department</th><th>Date / Time</th><th>Referral</th><th>Status</th><th>Payment</th><th></th></tr>
       </thead>
       <tbody>
         <% rows.forEach(function(a) { %>
@@ -51,6 +51,7 @@
             <td><%= a.doctor_name %></td>
             <td><%= a.department_name %></td>
             <td><%= new Date(a.appointment_date).toLocaleDateString() %><div class="text-muted small"><%= a.slot_time.slice(0,5) %></div></td>
+            <td><strong><%= a.referral_code || "—" %></strong><div class="small text-muted"><%= a.referral_provider_name || "" %></div></td>
             <td>
               <span class="badge text-bg-<%= a.status === 'COMPLETED' ? 'success' : (a.status === 'CANCELLED' || a.status === 'NO_SHOW' ? 'danger' : 'primary') %>"><%= a.status.replace('_',' ') %></span>
               <% if (a.visit_status) { %><div class="text-muted small mt-1"><%= a.visit_status.replace('_',' ') %></div><% } %>
@@ -70,7 +71,7 @@
           </tr>
         <% }) %>
         <% if (rows.length === 0) { %>
-          <tr><td colspan="9" class="text-center text-muted py-4">No appointments match these filters.</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-4">No appointments match these filters.</td></tr>
         <% } %>
       </tbody>
     </table>

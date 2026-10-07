@@ -65,7 +65,7 @@
         <div class="row g-2 small">
           <div class="col-6"><strong>Gender:</strong> <%= patient.gender %></div>
           <div class="col-6"><strong>Age:</strong> <%= patient.age_years || '—' %></div>
-          <div class="col-6"><strong>Mobile:</strong> <%= patient.mobile %></div>
+          <div class="col-6"><strong>Mobile:</strong> <%= patient.mobile %></div><div class="col-6"><strong>Referral Code:</strong> <%= patient.referral_code || "—" %></div><div class="col-6"><strong>Referral Provider:</strong> <%= patient.referral_provider_name || "—" %></div>
           <div class="col-6"><strong>Aadhaar:</strong> <%= patient.aadhaar_masked || '—' %></div>
           <div class="col-12"><strong>Address:</strong> <%= [patient.address, patient.village_town, patient.police_station, patient.district, patient.state, patient.pin_code].filter(Boolean).join(', ') || '—' %></div>
           <div class="col-12"><strong>Allergies:</strong> <%= patient.allergies || 'None recorded' %></div>
@@ -82,11 +82,11 @@
   <div class="col-lg-7">
     <div class="card mb-3">
       <div class="card-header">OPD History &amp; Digital Records</div>
-      <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Status</th><th>Digital Copies</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Date</th><th>Referral</th><th>Doctor</th><th>Diagnosis</th><th>Status</th><th>Digital Copies</th></tr></thead><tbody>
         <% opdHistory.forEach(v => { %>
 <tr>
   <td><%= new Date(v.checked_in_at).toLocaleDateString() %></td>
-  <td><%= v.doctor_name %></td>
+  <td><strong><%= v.referral_code || '—' %></strong><div class="small text-muted"><%= v.referral_provider_name || '' %></div></td><td><%= v.doctor_name %></td>
   <td><%= v.diagnosis || '—' %></td>
   <td><%= v.status %></td>
   <td class="text-nowrap">
@@ -95,7 +95,7 @@
   </td>
 </tr>
 <% }) %>
-        <% if (!opdHistory.length) { %><tr><td colspan="5" class="text-center text-muted py-3">No OPD history.</td></tr><% } %>
+        <% if (!opdHistory.length) { %><tr><td colspan="6" class="text-center text-muted py-3">No OPD history.</td></tr><% } %>
       </tbody></table></div>
     </div>
     <div class="card mb-3">
@@ -150,9 +150,9 @@
 
 <div class="card mt-3">
   <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-eyedropper"></i> Laboratory & Diagnostic Records</span><a href="/lab/orders/new?healthId=<%= encodeURIComponent(patient.health_id) %>" class="btn btn-sm btn-outline-primary">Book Test</a></div>
-  <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Order</th><th>Tests</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>
-  <% (labOrders || []).forEach(function(o){ %><tr><td><strong><%= o.order_code %></strong></td><td><%= o.total_tests %> test(s) · <%= o.reported_tests||0 %> reported</td><td><span class="badge text-bg-<%= o.status==='REPORTED'?'success':(o.status==='CANCELLED'?'secondary':'primary') %>"><%= o.status.replaceAll('_',' ') %></span></td><td><%= new Date(o.booking_date).toLocaleDateString() %></td><td><a href="/lab/orders/<%= o.id %>" class="btn btn-sm btn-outline-primary">Open</a></td></tr><% }) %>
-  <% if (!(labOrders || []).length) { %><tr><td colspan="5" class="text-center text-muted py-3">No laboratory or diagnostic records.</td></tr><% } %>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Order</th><th>Referral</th><th>Tests</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>
+  <% (labOrders || []).forEach(function(o){ %><tr><td><strong><%= o.order_code %></strong></td><td><strong><%= o.referral_code || '—' %></strong><div class="small text-muted"><%= o.referral_provider_name || '' %></div></td><td><%= o.total_tests %> test(s) · <%= o.reported_tests||0 %> reported</td><td><span class="badge text-bg-<%= o.status==='REPORTED'?'success':(o.status==='CANCELLED'?'secondary':'primary') %>"><%= o.status.replaceAll('_',' ') %></span></td><td><%= new Date(o.booking_date).toLocaleDateString() %></td><td><a href="/lab/orders/<%= o.id %>" class="btn btn-sm btn-outline-primary">Open</a></td></tr><% }) %>
+  <% if (!(labOrders || []).length) { %><tr><td colspan="6" class="text-center text-muted py-3">No laboratory or diagnostic records.</td></tr><% } %>
   </tbody></table></div>
 </div>
 

@@ -3,7 +3,7 @@
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
   <div>
     <h4 class="mb-0">Invoice <code><%= invoice.invoice_number %></code></h4>
-    <div class="text-muted"><%= invoice.patient_name %> (<code><%= invoice.health_id %></code>) &middot; <%= invoice.doctor_name %> &middot; <%= invoice.department_name %></div>
+    <div class="text-muted"><%= invoice.patient_name %> (<code><%= invoice.health_id %></code>) &middot; Referral: <strong><%= invoice.referral_code || '—' %></strong><%= invoice.referral_provider_name ? ' · ' + invoice.referral_provider_name : '' %> &middot; <%= invoice.doctor_name %> &middot; <%= invoice.department_name %></div>
   </div>
   <div class="d-flex gap-2">
     <a href="/billing/invoices/<%= invoice.id %>/print" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer"></i> Print Invoice</a>

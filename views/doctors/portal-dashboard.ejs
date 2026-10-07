@@ -24,18 +24,19 @@
       </div>
       <div class="table-responsive">
         <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>Token</th><th>Patient</th><th>Age/Gender</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Token</th><th>Patient</th><th>Referral</th><th>Age/Gender</th><th>Status</th><th></th></tr></thead>
           <tbody>
             <% queue.forEach(function(r) { %>
               <tr>
                 <td><span class="token-badge"><%= String(r.token_number).padStart(3,'0') %></span></td>
                 <td><%= r.patient_name %><div class="text-muted small"><%= r.health_id %></div></td>
+                <td><strong><%= r.referral_code || '—' %></strong><div class="text-muted small"><%= r.referral_provider_name || '' %></div></td>
                 <td><%= r.age_years || '—' %>/<%= r.gender %></td>
                 <td><span class="badge text-bg-secondary"><%= r.visit_status.replace('_',' ') %></span></td>
                 <td><a href="/doctor/consultation/<%= r.visit_id %>" class="btn btn-sm btn-primary">Open</a></td>
               </tr>
             <% }) %>
-            <% if (queue.length === 0) { %><tr><td colspan="5" class="text-center text-muted py-4">No patients in your queue today.</td></tr><% } %>
+            <% if (queue.length === 0) { %><tr><td colspan="6" class="text-center text-muted py-4">No patients in your queue today.</td></tr><% } %>
           </tbody>
         </table>
       </div>
@@ -47,16 +48,17 @@
       <div class="card-header">Upcoming Appointments</div>
       <div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead><tr><th>Date</th><th>Time</th><th>Patient</th></tr></thead>
+          <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Referral</th></tr></thead>
           <tbody>
             <% upcoming.forEach(function(a) { %>
               <tr>
                 <td><%= new Date(a.appointment_date).toLocaleDateString() %></td>
                 <td><%= a.slot_time.slice(0,5) %></td>
                 <td><%= a.patient_name %><div class="text-muted small"><%= a.health_id %></div></td>
+                <td><strong><%= a.referral_code || '—' %></strong><div class="text-muted small"><%= a.referral_provider_name || '' %></div></td>
               </tr>
             <% }) %>
-            <% if (upcoming.length === 0) { %><tr><td colspan="3" class="text-center text-muted py-4">No upcoming appointments.</td></tr><% } %>
+            <% if (upcoming.length === 0) { %><tr><td colspan="4" class="text-center text-muted py-4">No upcoming appointments.</td></tr><% } %>
           </tbody>
         </table>
       </div>

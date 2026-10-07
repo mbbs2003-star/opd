@@ -13,6 +13,7 @@
     <div class="kv"><span class="k">Date</span><span class="v"><%= new Date(payment.paid_at).toLocaleString() %></span></div>
     <div class="kv"><span class="k">Patient</span><span class="v"><%= invoice.patient_name %></span></div>
     <div class="kv"><span class="k">Health ID</span><span class="v"><%= invoice.health_id %></span></div>
+    <div class="kv"><span class="k">Referral</span><span class="v"><%= invoice.referral_code || '—' %><%= invoice.referral_provider_name ? ' · ' + invoice.referral_provider_name : '' %></span></div>
     <div class="kv"><span class="k">Doctor</span><span class="v"><%= invoice.doctor_name %></span></div>
     <div class="kv"><span class="k">Department</span><span class="v"><%= invoice.department_name %></span></div>
   </div>

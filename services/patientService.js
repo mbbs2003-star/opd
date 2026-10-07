@@ -78,6 +78,28 @@ async function registerPatient(payload, actorUserId) {
           }
         }
 
+        let referralCode = null;
+        let referralProviderId = null;
+        if (payload.referralCode || payload.referralProviderId) {
+          const suppliedCode = payload.referralCode
+            ? String(payload.referralCode).trim().toUpperCase()
+            : null;
+          const [[referralProvider]] = await conn.execute(
+            payload.referralProviderId
+              ? 'SELECT id, referral_code, is_active FROM referral_providers WHERE id=:id LIMIT 1'
+              : 'SELECT id, referral_code, is_active FROM referral_providers WHERE referral_code=:code LIMIT 1',
+            payload.referralProviderId ? { id: payload.referralProviderId } : { code: suppliedCode }
+          );
+          if (!referralProvider || Number(referralProvider.is_active) !== 1) {
+            throw new AppError('The selected referral code is invalid or inactive.', 422);
+          }
+          if (suppliedCode && referralProvider.referral_code !== suppliedCode) {
+            throw new AppError('Referral provider and referral code do not match.', 422);
+          }
+          referralCode = referralProvider.referral_code;
+          referralProviderId = referralProvider.id;
+        }
+
         const [result] = await conn.execute(
           `INSERT INTO patients
             (health_id, registration_number, branch_id, name, father_name, husband_name, gender, dob, age_years,
@@ -103,8 +125,8 @@ async function registerPatient(payload, actorUserId) {
             aadhaarHash,
             aadhaarLast4,
             createdBy: actorUserId,
-            referralCode: payload.referralCode ? String(payload.referralCode).trim().toUpperCase() : null,
-            referralProviderId: payload.referralProviderId || null
+            referralCode,
+            referralProviderId
           }
         );
         const patientId = result.insertId;
@@ -179,10 +201,11 @@ async function searchPatients({ q, limit = 10 }) {
 
   const baseSql = `
     SELECT p.id, p.health_id, p.registration_number, p.name, p.gender, p.age_years, p.mobile,
-           p.aadhaar_last4, pa.district,
+           p.aadhaar_last4, p.referral_code, rp.provider_name AS referral_provider_name, pa.district,
            (SELECT MAX(v.checked_in_at) FROM opd_visits v WHERE v.patient_id = p.id) AS last_visit
     FROM patients p
     LEFT JOIN patient_addresses pa ON pa.patient_id = p.id
+    LEFT JOIN referral_providers rp ON rp.id=p.referral_provider_id
     WHERE p.deleted_at IS NULL
       AND (
         p.health_id = :exact

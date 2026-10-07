@@ -43,13 +43,14 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead>
-        <tr><th>Token</th><th>Patient</th><th>Age / Gender</th><th>Doctor</th><th>Time</th><th>Status</th><th>Payment</th><th>Update</th></tr>
+        <tr><th>Token</th><th>Patient</th><th>Referral</th><th>Age / Gender</th><th>Doctor</th><th>Time</th><th>Status</th><th>Payment</th><th>Update</th></tr>
       </thead>
       <tbody>
         <% rows.forEach(function(r) { %>
           <tr class="opd-row opd-row-<%= String(r.visit_status || '').toLowerCase() %>">
             <td><span class="token-badge"><%= String(r.token_number).padStart(3,'0') %></span></td>
             <td><a href="/patients/<%= r.health_id %>"><%= r.patient_name %></a><div class="text-muted small"><%= r.health_id %></div></td>
+            <td><strong><%= r.referral_code || '—' %></strong><div class="text-muted small"><%= r.referral_provider_name || '' %></div></td>
             <td><%= r.age_years || '—' %> / <%= r.gender %></td>
             <td><%= r.doctor_name %></td>
             <td><%= r.slot_time.slice(0,5) %></td>
@@ -105,7 +106,7 @@
           </tr>
         <% }) %>
         <% if (rows.length === 0) { %>
-          <tr><td colspan="8" class="text-center text-muted py-4">No patients in the queue for this date.</td></tr>
+          <tr><td colspan="9" class="text-center text-muted py-4">No patients in the queue for this date.</td></tr>
         <% } %>
       </tbody>
     </table>

@@ -35,6 +35,8 @@
           <div><strong>Health ID:</strong> <code><%= appointment.health_id %></code></div>
           <div><strong>Age / Gender:</strong> <%= appointment.age_years || '—' %> / <%= appointment.gender %></div>
           <div><strong>Mobile:</strong> <%= appointment.mobile %></div>
+          <div><strong>Referral Code:</strong> <%= appointment.referral_code || "—" %></div>
+          <div><strong>Referral Provider:</strong> <%= appointment.referral_provider_name || "—" %></div>
           <div><strong>Doctor:</strong> <%= appointment.doctor_name %></div>
           <div><strong>Department:</strong> <%= appointment.department_name %></div>
           <div><strong>Date:</strong> <%= new Date(appointment.appointment_date).toLocaleDateString() %></div>
