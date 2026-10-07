@@ -81,8 +81,15 @@ async function bookOpd(req,res,next){
       gravida:req.body.gravida,
       para:req.body.para,
       abortions:req.body.abortions,
-      pregnancyStatus:req.body.pregnancyStatus,
-      obstetricNotes:req.body.obstetricNotes,
+      pregnancyStatus: req.body.pregnancyStatus,
+        pregnancyDatingMethod: req.body.pregnancyDatingMethod,
+        conceptionDate: req.body.conceptionDate,
+        referenceDate: req.body.referenceDate,
+        usgDate: req.body.usgDate,
+        usgGestationalAgeWeeks: req.body.usgGestationalAgeWeeks,
+        usgGestationalAgeDays: req.body.usgGestationalAgeDays,
+        usgEdd: req.body.usgEdd,
+        obstetricNotes: req.body.obstetricNotes,
       referralCode:(await agentService.resolveReferralForPatient(patient,req.body.referralCode)).referral_code
     },req.user.id);
     req.flash('success',`OPD booked for ${patient.name}. Token ${String(result.token).padStart(3,'0')} — ${result.appointmentCode}`);
