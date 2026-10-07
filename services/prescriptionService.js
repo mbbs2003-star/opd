@@ -279,7 +279,7 @@ async function getPrescription(prescriptionId) {
             m.allergies,
             u.name AS doctor_name, d.qualification, d.professional_reg_number, d.specialisation, d.address AS doctor_address, d.mobile AS doctor_mobile, d.email AS doctor_email,
             dept.name AS department_name,
-            c.diagnosis, c.investigation_advice, c.follow_up_date, c.complaints,
+            c.diagnosis, c.investigation_advice, c.advice, c.follow_up_date, c.complaints,
             c.symptoms, c.personal_history, c.clinical_notes,
             c.complementary_requested,
             a.lmp_date, a.gravida, a.para, a.abortions, a.pregnancy_status, a.pregnancy_dating_method,

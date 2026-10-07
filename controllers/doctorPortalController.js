@@ -186,6 +186,26 @@ async function updateProfile(req, res, next) {
 }
 
 
+async function saveClinicalFindingSuggestion(req, res, next) {
+  try {
+    const doctorId = requireDoctorContext(req);
+    const finding = String(req.body.finding || '').trim().replace(/\s+/g, ' ');
+    if (!doctorId) throw new AppError('A doctor account is required', 403);
+    if (!finding || finding.length < 2) return res.status(422).json({ ok: false, message: 'Clinical finding is too short.' });
+    if (finding.length > 255) return res.status(422).json({ ok: false, message: 'Clinical finding is too long.' });
+
+    await pool.execute(
+      `INSERT INTO doctor_clinical_finding_suggestions (doctor_id, finding, normalized)
+       VALUES (:doctorId, :finding, :normalized)
+       ON DUPLICATE KEY UPDATE finding = VALUES(finding), updated_at = NOW()`,
+      { doctorId, finding, normalized: finding.toLowerCase() }
+    );
+    res.json({ ok: true, finding });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function saveComplaintSuggestion(req, res, next) {
   try {
     const doctorId = requireDoctorContext(req);
@@ -206,4 +226,4 @@ async function saveComplaintSuggestion(req, res, next) {
   }
 }
 
-module.exports = { dashboard, queue, callNext, consultation, editConsultation, saveConsultation, completeVisit, profile, updateProfile, saveComplaintSuggestion };
+module.exports = { dashboard, queue, callNext, consultation, editConsultation, saveConsultation, completeVisit, profile, updateProfile, saveComplaintSuggestion, saveClinicalFindingSuggestion };
