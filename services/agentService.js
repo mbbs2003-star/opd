@@ -13,6 +13,27 @@ async function requireReferralCode(value) {
   return provider;
 }
 
+/**
+ * Existing patients keep their original referral attribution even when a
+ * provider is later deactivated. New referral selections must still resolve
+ * through the Super Admin managed active-code list.
+ */
+async function resolveReferralForPatient(patient, value) {
+  const supplied = referralService.normalizeCode(value);
+  if (!supplied) throw new AppError('Select a referral provider/code.', 422);
+
+  const stored = referralService.normalizeCode(patient && patient.referral_code);
+  if (stored && patient.referral_provider_id && stored === supplied) {
+    const [[provider]] = await pool.execute(
+      'SELECT id, referral_code, provider_name, provider_type FROM referral_providers WHERE id=:id',
+      { id: patient.referral_provider_id }
+    );
+    if (provider) return provider;
+  }
+
+  return requireReferralCode(supplied);
+}
+
 async function dashboard(agentId, branchId) {
   const [[patients]] = await pool.execute(
     'SELECT COUNT(*) AS count FROM patients WHERE branch_id=:branchId AND deleted_at IS NULL AND created_by=:agentId',
@@ -114,4 +135,4 @@ async function getPatient(healthId, branchId) {
   return data.patient;
 }
 
-module.exports = { dashboard, patientList, referralStats, registerPatient, referralCode, requireReferralCode, getReferralProviders, getBookingContext, getTestContext, getPatient };
+module.exports = { dashboard, patientList, referralStats, registerPatient, referralCode, requireReferralCode, resolveReferralForPatient, getReferralProviders, getBookingContext, getTestContext, getPatient };
