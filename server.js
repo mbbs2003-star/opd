@@ -3,6 +3,7 @@ const appConfig = require('./config/appConfig');
 const { pool } = require('./config/database');
 const emailConfig = require('./config/email');
 const emailService = require('./services/emailService');
+const { run: runMigrations } = require('./database/migrate');
 
 async function start() {
   if (appConfig.isProd) {
@@ -15,6 +16,12 @@ async function start() {
   }
 
   try {
+    // Apply any pending NON-DESTRUCTIVE migrations before serving requests.
+    // This prevents application code from running against an older production
+    // schema (for example, referral_providers being introduced after the code
+    // deployment). The migration runner is idempotent and records each file.
+    await runMigrations();
+
     // Fail fast if the database isn't reachable.
     const conn = await pool.getConnection();
     await conn.ping();
