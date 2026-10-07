@@ -118,8 +118,10 @@ async function consultation(req, res, next, forcedQuery = null) {
 }
 
 async function editConsultation(req, res, next) {
-  const query = new URLSearchParams({ edit: '1' });
-  return consultation(req, res, next, query);
+  // Pass a plain object because consultation() reads the edit flag as a
+  // property. URLSearchParams exposes get(), not .edit, which previously
+  // caused the Edit Consultation route to render the page as read-only.
+  return consultation(req, res, next, { edit: '1' });
 }
 
 async function saveConsultation(req, res, next) {
