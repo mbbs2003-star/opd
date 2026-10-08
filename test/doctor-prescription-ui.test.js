@@ -150,3 +150,16 @@ test('Agent OPD booking uses dynamic department, doctor, date and slot cascade',
   assert.match(source, /\/doctors\/.*\/slots/);
   assert.match(source, /agentSlotTime/);
 });
+
+
+test('Receptionist Today Queue exposes vitals save flow and controller normalizes empty vitals', () => {
+  const queue = fs.readFileSync(path.join(__dirname, '..', 'views', 'opd', 'queue.ejs'), 'utf8');
+  const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'opdController.js'), 'utf8');
+  const migration = fs.readFileSync(path.join(__dirname, '..', 'database', 'migrations', '1001_receptionist_vitals_hardening.sql'), 'utf8');
+  assert.match(queue, /\/opd\/visits\/<%= r\.visit_id %>\/vitals/);
+  assert.match(controller, /respiratoryRate: String\(req\.body\.respiratoryRate \|\| ''\)\.trim\(\) \|\| null/);
+  assert.match(controller, /INSERT INTO appointment_vitals/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS appointment_vitals/);
+  assert.match(migration, /respiratory_rate/);
+  assert.match(migration, /queue\.manage/);
+});
