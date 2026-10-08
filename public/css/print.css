@@ -121,7 +121,7 @@ body.print-doc {
 .rx-patient-bar>div{display:flex;gap:8px;flex-wrap:wrap}
 .rx-patient-bar span{white-space:nowrap}
 .rx-complementary-mark{position:absolute;right:4px;top:55px;width:25px;height:25px;border:3px solid #b91c1c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#b91c1c;font-size:16px;background:#fff}
-.rx-clinical-grid{display:grid;grid-template-columns:42% 58%;gap:8px;align-items:start}
+.rx-clinical-grid{display:grid;grid-template-columns:39% 61%;gap:8px;align-items:start}
 .rx-left,.rx-right{min-width:0}
 .prescription-one-page section{margin:0 0 6px;break-inside:avoid}
 .prescription-one-page section h3{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#0d6e6e;margin:0 0 3px;padding-bottom:2px;border-bottom:1px solid #cbdada}
@@ -134,11 +134,11 @@ body.print-doc {
 .rx-title{font-size:13px;font-weight:800;color:#0d6e6e;margin-bottom:4px}
 .rx-symbol{font-family:Georgia,serif;font-size:19px;font-style:italic;margin-right:4px}
 .rx-compact-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.rx-compact-table th,.rx-compact-table td{border:1px solid #aebbbb;padding:3px 4px;font-size:8.5px;vertical-align:top;overflow-wrap:anywhere}
-.rx-compact-table th{background:#eef5f4;text-transform:uppercase;font-size:7.5px}
+.rx-compact-table th,.rx-compact-table td{border:1px solid #aebbbb;padding:3.5px 4.5px;font-size:9.2px;vertical-align:top;overflow-wrap:anywhere}
+.rx-compact-table th{background:#eef5f4;text-transform:uppercase;font-size:8.1px}
 /* Bengali instructions are a compact subordinate row belonging to the medicine above. */
 .rx-bengali-row td{
-  font-size:7.2px!important;
+  font-size:7.5px!important;
   line-height:1.15;
   padding:1px 4px 2px!important;
   background:#fff;
@@ -152,8 +152,8 @@ body.print-doc {
 .rx-advice{margin-top:auto!important;padding-top:4px;border-top:1px solid #cbdada}
 .rx-left{display:flex;flex-direction:column;min-height:100%}
 .rx-compact-table th:nth-child(1){width:5%}.rx-compact-table th:nth-child(2){width:34%}.rx-compact-table th:nth-child(3){width:12%}.rx-compact-table th:nth-child(4){width:17%}.rx-compact-table th:nth-child(5){width:13%}.rx-compact-table th:nth-child(6){width:19%}
-.rx-med-name{display:block;font-size:9.2px;line-height:1.1}
-.rx-generic{display:block;color:#555;font-size:7.8px;margin-top:1px}
+.rx-med-name{display:block;font-size:9.8px;line-height:1.1}
+.rx-generic{display:block;color:#555;font-size:8.3px;margin-top:1px}
 .rx-compact-table td:nth-child(2){font-weight:600}
 .rx-med-0{color:#1d4ed8}.rx-med-1{color:#047857}.rx-med-2{color:#6d28d9}.rx-med-3{color:#b45309}.rx-med-4{color:#be185d}
 .rx-bottom-line{margin-top:5px;padding:4px 6px;border-top:1px solid #bbb;border-bottom:1px solid #bbb}

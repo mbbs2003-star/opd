@@ -126,9 +126,13 @@ test('USG dating migration and Bengali prescription rows are present', () => {
   assert.match(prescription, /<td colspan="6">[\s\S]*?বাংলা নির্দেশনা:/);
   const adviceIndex = prescription.indexOf('<% if (prescription.advice)');
   const rightColumnIndex = prescription.indexOf('<div class="rx-right">');
-  assert.ok(adviceIndex > 0 && adviceIndex < rightColumnIndex, 'Advice must stay in the left column');
-  const vitalsMarker = prescription.lastIndexOf('<% if (hasVitals)');
-  assert.ok(adviceIndex > vitalsMarker, 'Advice must be rendered after the left-column clinical sections');
+  const leftColumnEndIndex = prescription.indexOf('</div>\n\n    <div class="rx-right">');
+  assert.ok(adviceIndex > rightColumnIndex, 'Advice must be rendered in the right column');
+  assert.ok(leftColumnEndIndex > 0 && adviceIndex > leftColumnEndIndex, 'Advice must not remain in the left column');
+  const printCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'print.css'), 'utf8');
+  assert.match(printCss, /grid-template-columns:39% 61%/);
+  assert.match(printCss, /\.rx-compact-table th,.rx-compact-table td\{[^}]*font-size:9\.2px/);
+  assert.match(printCss, /\.rx-med-name\{display:block;font-size:9\.8px/);
   assert.match(prescription, /class="rx-bengali-row"[\s\S]*?<td colspan="6">/);
   assert.doesNotMatch(prescription, /rx-bengali-row[\\s\\S]{0,800}medicine_name_freetext/);
   const textUtil = require('../utils/prescriptionText');
