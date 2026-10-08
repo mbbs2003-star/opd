@@ -107,6 +107,15 @@ test('doctor Rx editor uses the requested default form, dose, and instructions f
   assert.match(source, /value="\'+esc\(instructions\)\+'"/);
 });
 
+test('OPD booking loads doctors after branch and department selection', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'views', 'opd', 'book.ejs'), 'utf8');
+  assert.match(source, /fetch\('\/doctors\/api\/list\?branchId=/);
+  assert.match(source, /departmentId=/);
+  assert.match(source, /doctorSel\.addEventListener\('change', loadDoctorDates\)/);
+  assert.match(source, /available-dates/);
+  assert.match(source, /\/doctors\/.*\/slots/);
+});
+
 test('USG dating migration and Bengali prescription rows are present', () => {
   const migration = fs.readFileSync(path.join(__dirname, '..', 'database', 'migrations', '1007_ultrasound_pregnancy_dating.sql'), 'utf8');
   for (const field of ['pregnancy_dating_method', 'usg_date', 'usg_gestational_age_weeks', 'usg_gestational_age_days', 'usg_edd']) {
