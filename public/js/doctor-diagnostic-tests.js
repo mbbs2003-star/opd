@@ -65,7 +65,7 @@
         '</div>') +
     '</div>';
 
-  advice.closest('.col-md-8')?.insertAdjacentElement('beforebegin', section);
+  advice.closest('.col-md-6')?.insertAdjacentElement('beforebegin', section);
   section.classList.add('col-12');
 
   var list = section.querySelector('#diagnosticTestList');

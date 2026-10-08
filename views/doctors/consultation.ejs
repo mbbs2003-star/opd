@@ -288,6 +288,7 @@
     const selectedFreq = String(item.frequency || 'OD').split(/[,;]+/).map(x=>x.trim()).filter(Boolean);
     const medicineForm = item.medicine_form || 'Tablet';
     const dosage = item.dosage || '1';
+    const duration = item.duration || '7 days';
     const instructions = item.instructions || 'After food';
     return '<tr>'+
       '<td><input type="hidden" name="medicineId" value="'+esc(item.medicine_id)+'"><input type="text" name="medicineName" class="form-control medicine-name-field medicine-color-'+(index%5)+'" list="medicineList" value="'+esc(item.medicine_name_freetext)+'" placeholder="Medicine name" '+(<%= !canEdit ? 'true' : 'false' %>?'readonly':'required')+'></td>'+
@@ -295,7 +296,7 @@
       '<td><select name="medicineForm" class="form-select medicine-form" <%= !canEdit ? 'disabled' : '' %>><option value="">Select</option>'+optionList(formOptions)+'<option value="__OTHER__">+ Add type</option></select><input type="text" class="form-control mt-1 custom-form" placeholder="New type" style="display:none" <%= !canEdit ? 'readonly' : '' %>></td>'+
       '<td><input type="text" name="dosage" class="form-control" value="'+esc(dosage)+'" placeholder="1 tablet" <%= !canEdit ? 'readonly' : '' %>></td>'+
       '<td><div class="d-flex flex-wrap gap-1 frequency-pills">'+freq.map(x=>'<label class="badge rounded-pill text-bg-light border"><input type="checkbox" class="frequency-check me-1" value="'+x+'" '+(selectedFreq.includes(x)?'checked':'')+' <%= !canEdit ? 'disabled' : '' %>>'+x+'</label>').join('')+'</div><input type="hidden" name="frequency" class="frequency-value" value="'+esc(item.frequency)+'"></td>'+
-      '<td><input type="text" name="duration" class="form-control" value="'+esc(item.duration)+'" placeholder="7 days" <%= !canEdit ? 'readonly' : '' %>></td>'+
+      '<td><input type="text" name="duration" class="form-control" value="'+esc(duration)+'" placeholder="7 days" <%= !canEdit ? 'readonly' : '' %>></td>'+
       '<td><select name="route" class="form-select route-select" <%= !canEdit ? 'disabled' : '' %>><option value="">Select</option>'+optionList(routeOptions)+'<option value="__OTHER__">+ Add route</option></select><input type="text" class="form-control mt-1 custom-route" placeholder="New route" style="display:none" <%= !canEdit ? 'readonly' : '' %>></td>'+
       '<td><input type="text" name="quantity" class="form-control" value="'+esc(item.quantity)+'" placeholder="10" <%= !canEdit ? 'readonly' : '' %>></td>'+
       '<td><input type="text" name="instructions" class="form-control" value="'+esc(instructions)+'" placeholder="After food" <%= !canEdit ? 'readonly' : '' %>></td>'+
@@ -352,7 +353,7 @@
   if(clinicalInput){clinicalInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addFinding(clinicalInput.value,true);clinicalInput.value='';renderClinical('');}});clinicalInput.addEventListener('input',()=>renderClinical(clinicalInput.value));clinicalInput.addEventListener('focus',()=>renderClinical(clinicalInput.value));}
   document.addEventListener('click',e=>{if(e.target.classList.contains('finding-remove')){findings.splice(Number(e.target.dataset.index),1);syncFindings();}});
   syncFindings();
-  form.addEventListener('submit',()=>{syncHistory();syncFindings();});custom.addEventListener('input',syncHistory);custom.addEventListener('click',e=>{if(e.target.classList.contains('ph-remove')){e.target.closest('.col-md-6').remove();syncHistory();}});
+  form.addEventListener('submit',()=>{if(clinicalInput && clinicalInput.value.trim()) addFinding(clinicalInput.value, false); syncHistory();syncFindings();});custom.addEventListener('input',syncHistory);custom.addEventListener('click',e=>{if(e.target.classList.contains('ph-remove')){e.target.closest('.col-md-6').remove();syncHistory();}});
   if(ph.surgery){document.getElementById('phSurgery').value=ph.surgery.value||'NO';document.getElementById('phSurgeryOther').value=ph.surgery.other||'';}if(ph.sleep){document.getElementById('phSleep').value=ph.sleep.value||'NORMAL';document.getElementById('phSleepOther').value=ph.sleep.other||'';}if(ph.drinking){document.getElementById('phDrinking').value=ph.drinking.value||'NO';document.getElementById('phDrinkingOther').value=ph.drinking.other||'';}if(ph.bowel){document.getElementById('phBowel').value=ph.bowel.value||'REGULAR';document.getElementById('phBowelOther').value=ph.bowel.other||'';}['phSurgery','phSleep','phDrinking','phBowel'].forEach(id=>document.getElementById(id)?.dispatchEvent(new Event('change')));sync();syncHistory();
 })();
 </script>
