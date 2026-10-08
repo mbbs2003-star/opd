@@ -138,3 +138,15 @@ test('USG dating migration and Bengali prescription rows are present', () => {
   assert.doesNotMatch(result.bengali, /medicine_name_freetext/i);
   assert.match(result.bengali, /খাবারের পরে/);
 });
+
+
+test('Agent OPD booking uses dynamic department, doctor, date and slot cascade', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'views', 'agent', 'opd-book.ejs'), 'utf8');
+  assert.match(source, /\/doctors\/api\/list\?branchId=/);
+  assert.match(source, /departmentId=/);
+  assert.match(source, /agentDepartmentId/);
+  assert.match(source, /agentDoctorId/);
+  assert.match(source, /available-dates/);
+  assert.match(source, /\/doctors\/.*\/slots/);
+  assert.match(source, /agentSlotTime/);
+});
