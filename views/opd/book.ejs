@@ -178,6 +178,154 @@
 
   toggleObstetric('<%= patient ? patient.gender : '' %>');
 
+  // Branch -> Department -> Doctor -> Date -> Slot cascade.
+  // Doctors are loaded from the server so the selector always reflects the
+  // selected branch and department instead of relying on stale page data.
+  const branchSel = document.getElementById('branchId');
+  const departmentSel = document.getElementById('departmentId');
+  const doctorSel = document.getElementById('doctorId');
+  const dateInput = document.getElementById('appointmentDate');
+  const slotContainer = document.getElementById('slotContainer');
+  const slotTimeField = document.getElementById('slotTime');
+  const dateHint = document.getElementById('dateAvailabilityHint');
+  let bookingDatePicker = null;
+  let availableDates = new Set();
+  let doctorRequestId = 0;
+
+  function resetBookingDateSlots(message) {
+    availableDates = new Set();
+    slotTimeField.value = '';
+    slotContainer.innerHTML = '<span class="text-muted small">' + message + '</span>';
+    if (bookingDatePicker) {
+      bookingDatePicker.clear();
+      bookingDatePicker.set('enable', []);
+    } else {
+      dateInput.value = '';
+    }
+  }
+
+  function resetDoctor(message) {
+    doctorSel.innerHTML = '<option value="">' + message + '</option>';
+    doctorSel.disabled = true;
+    resetBookingDateSlots('Select a doctor and date to see available slots.');
+  }
+
+  function initDatePicker() {
+    if (!window.flatpickr || bookingDatePicker) return;
+    bookingDatePicker = window.flatpickr(dateInput, {
+      dateFormat: 'Y-m-d',
+      minDate: '<%= today %>',
+      disable: [function(date) {
+        const key = bookingDatePicker ? bookingDatePicker.formatDate(date, 'Y-m-d') : '';
+        return !availableDates.has(key);
+      }],
+      onChange: function(selectedDates, dateStr) {
+        slotTimeField.value = '';
+        loadSlots(dateStr);
+      }
+    });
+  }
+
+  async function loadDoctors() {
+    const requestId = ++doctorRequestId;
+    const branchId = branchSel.value;
+    const departmentId = departmentSel.value;
+    resetDoctor(departmentId ? 'Loading doctors…' : 'Select department first');
+    if (!branchId || !departmentId) return;
+
+    try {
+      const response = await fetch('/doctors/api/list?branchId=' + encodeURIComponent(branchId) +
+        '&departmentId=' + encodeURIComponent(departmentId), { headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (requestId !== doctorRequestId) return;
+      if (!response.ok) throw new Error(data.message || 'Unable to load doctors');
+      doctorSel.innerHTML = '<option value="">Select doctor</option>';
+      (data.doctors || []).forEach(function(doctor) {
+        const option = document.createElement('option');
+        option.value = doctor.id;
+        option.textContent = doctor.name + (doctor.consultation_fee != null
+          ? ' — ₹' + Number(doctor.consultation_fee || 0).toFixed(0) : '');
+        doctorSel.appendChild(option);
+      });
+      doctorSel.disabled = !(data.doctors || []).length;
+      if (!(data.doctors || []).length) {
+        doctorSel.innerHTML = '<option value="">No active doctor found</option>';
+      }
+      resetBookingDateSlots('Select a doctor and date to see available slots.');
+      dateHint.textContent = doctorSel.disabled
+        ? 'No active doctor is available for this branch and department.'
+        : 'Select a doctor. Only that doctor’s available OPD dates will be enabled.';
+    } catch (error) {
+      if (requestId !== doctorRequestId) return;
+      resetDoctor('Unable to load doctors — try again');
+      dateHint.textContent = error.message || 'Unable to load doctors.';
+    }
+  }
+
+  async function loadDoctorDates() {
+    const doctorId = doctorSel.value;
+    initDatePicker();
+    resetBookingDateSlots('Loading available OPD dates…');
+    if (!doctorId) return;
+    try {
+      const response = await fetch('/doctors/' + encodeURIComponent(doctorId) +
+        '/available-dates?from=' + encodeURIComponent('<%= today %>') + '&days=90',
+        { headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Unable to load available dates');
+      availableDates = new Set((data.dates || []).map(String));
+      if (bookingDatePicker) bookingDatePicker.set('enable', [function(date) {
+        const key = bookingDatePicker.formatDate(date, 'Y-m-d');
+        return availableDates.has(key);
+      }]);
+      dateHint.textContent = availableDates.size
+        ? 'Only this doctor’s available OPD dates are enabled.'
+        : 'This doctor has no available OPD dates in the next 90 days.';
+    } catch (error) {
+      dateHint.textContent = error.message || 'Unable to load doctor availability.';
+    }
+  }
+
+  async function loadSlots(date) {
+    const doctorId = doctorSel.value;
+    if (!doctorId || !date) return;
+    slotContainer.innerHTML = '<span class="text-muted small">Loading available slots…</span>';
+    try {
+      const response = await fetch('/doctors/' + encodeURIComponent(doctorId) +
+        '/slots?date=' + encodeURIComponent(date), { headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Unable to load slots');
+      const slots = data.slots || [];
+      if (!slots.length) {
+        slotContainer.innerHTML = '<span class="text-muted small">No available slots for this date.</span>';
+        return;
+      }
+      slotContainer.innerHTML = slots.map(function(slot) {
+        const time = String(slot.time || slot.slot_time || '').slice(0, 5);
+        const label = slot.label || time;
+        return '<button type="button" class="btn btn-outline-primary btn-sm me-2 mb-2" data-slot-time="' +
+          time.replace(/"/g, '&quot;') + '">' + label + '</button>';
+      }).join('');
+      slotContainer.querySelectorAll('[data-slot-time]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          slotTimeField.value = button.dataset.slotTime;
+          slotContainer.querySelectorAll('[data-slot-time]').forEach(function(item) {
+            item.classList.remove('active');
+          });
+          button.classList.add('active');
+        });
+      });
+    } catch (error) {
+      slotContainer.innerHTML = '<span class="text-danger small">' + (error.message || 'Unable to load slots.') + '</span>';
+    }
+  }
+
+  branchSel.addEventListener('change', loadDoctors);
+  departmentSel.addEventListener('change', loadDoctors);
+  doctorSel.addEventListener('change', loadDoctorDates);
+  initDatePicker();
+  if (branchSel.value && departmentSel.value) loadDoctors();
+
   // Pregnancy calculator for the female assessment.
   const pregnancyStatus = document.getElementById('pregnancyStatus');
   const pregnancyMethod = document.getElementById('pregnancyMethod');
