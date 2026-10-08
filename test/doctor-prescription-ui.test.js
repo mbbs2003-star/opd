@@ -186,3 +186,24 @@ test('vitals pregnancy assessment renders without an undefined canEdit error', (
     }, { filename: vitalsView });
   });
 });
+
+
+test('doctor consultation persists Clinical Findings and defaults Rx duration to 7 days', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'doctors', 'consultation.ejs'), 'utf8');
+  const service = fs.readFileSync(path.join(__dirname, '..', 'services', 'consultationService.js'), 'utf8');
+  const prescriptionService = fs.readFileSync(path.join(__dirname, '..', 'services', 'prescriptionService.js'), 'utf8');
+  assert.match(view, /name="clinicalNotes"/);
+  assert.match(view, /addFinding\(clinicalInput\.value, false\)/);
+  assert.match(view, /const duration = item\.duration \|\| '7 days';/);
+  assert.match(prescriptionService, /duration: durations\[i\] \|\| '7 days'/);
+  assert.match(service, /clinical_notes = :notes/);
+  assert.match(service, /notes: payload\.clinicalNotes \|\| null/);
+});
+
+test('doctor diagnostic selector renders checkbox list and custom add-test control', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'doctor-diagnostic-tests.js'), 'utf8');
+  assert.match(source, /advice\.closest\('\.col-md-6'\)/);
+  assert.match(source, /diagnostic-test-check/);
+  assert.match(source, /Add Test/);
+  assert.match(source, /CBC \(Complete Blood Count\)/);
+});
