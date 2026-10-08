@@ -1,6 +1,6 @@
 <%
   const pregnancyData = pregnancy || {};
-  const editable = canEdit !== false;
+  const editable = typeof canEdit === 'undefined' || canEdit !== false;
   const initialCalculation = pregnancyCalculation || null;
   const initialMode = initialCalculation && initialCalculation.referenceMode ? initialCalculation.referenceMode : (pregnancyData.pregnancy_dating_method || 'LMP');
   const initialReference = initialCalculation && initialCalculation.referenceDate

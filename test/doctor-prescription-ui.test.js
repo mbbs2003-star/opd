@@ -163,3 +163,26 @@ test('Receptionist Today Queue exposes vitals save flow and controller normalize
   assert.match(migration, /respiratory_rate/);
   assert.match(migration, /queue\.manage/);
 });
+
+
+test('vitals pregnancy assessment renders without an undefined canEdit error', () => {
+  const vitalsView = path.join(__dirname, '..', 'views', 'opd', 'vitals.ejs');
+  const partial = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'pregnancy-assessment.ejs'), 'utf8');
+  assert.match(partial, /typeof canEdit === 'undefined' \|\| canEdit !== false/);
+
+  assert.doesNotThrow(() => {
+    ejs.render(fs.readFileSync(vitalsView, 'utf8'), {
+      csrfToken: 'test-token',
+      visit: {
+        id: 1,
+        patient_name: 'Test Patient',
+        health_id: '1234567890',
+        token_number: 1,
+        gender: 'female'
+      },
+      vitals: {},
+      pregnancy: {},
+      pregnancyCalculation: null
+    }, { filename: vitalsView });
+  });
+});

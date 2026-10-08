@@ -11,7 +11,7 @@
 </div></div></div>
 <% if (patient && String(patient.gender || '').toLowerCase() === 'female') { %>
 <div class="mb-3">
-  <%- include('../partials/pregnancy-assessment', { pregnancy: patient, pregnancyCalculation: null }) %>
+  <%- include('../partials/pregnancy-assessment', { pregnancy: patient, pregnancyCalculation: null, canEdit: true }) %>
 </div>
 <% } %><div class="text-end"><button class="btn btn-primary btn-lg">Book OPD Appointment</button></div></form>
 

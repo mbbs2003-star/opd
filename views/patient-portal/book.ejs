@@ -35,7 +35,7 @@
         <textarea name="reason" class="form-control" rows="2" placeholder="e.g. Fever and body ache for 3 days"></textarea>
       </div><div class="col-12">
         <% if (String(patient.gender || '').toLowerCase() === 'female') { %>
-          <%- include('../partials/pregnancy-assessment', { pregnancy: patient, pregnancyCalculation: null }) %>
+          <%- include('../partials/pregnancy-assessment', { pregnancy: patient, pregnancyCalculation: null, canEdit: true }) %>
         <% } %>
       </div>
     </div>
