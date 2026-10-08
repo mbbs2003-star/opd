@@ -3,10 +3,10 @@
 <div class="col-md-6"><label class="form-label">Patient Health ID *</label><div class="input-group"><input name="healthId" class="form-control" value="<%= patient ? patient.health_id : '' %>" required><button type="button" class="btn btn-outline-secondary" onclick="location.href='/agent/opd/new?healthId='+encodeURIComponent(document.querySelector('[name=healthId]').value)">Find</button></div></div>
 <div class="col-md-6"><label class="form-label">Referral Provider / Code *</label><% if (patient && patient.referral_code) { %><input type="hidden" name="referralCode" value="<%= patient.referral_code %>"><div class="form-control bg-light"><strong><%= patient.referral_provider_name || "Legacy / Unmapped" %></strong> — <code><%= patient.referral_code %></code></div><div class="form-text">Inherited from the patient registration and kept consistent for attribution.</div><% } else { %><select name="referralCode" class="form-select" required><option value="">Select referral provider</option><% referralProviders.forEach(function(r){ %><option value="<%= r.referral_code %>" <%= selectedReferralCode===r.referral_code ? "selected" : "" %>><%= r.provider_name %> — <%= r.referral_code %></option><% }) %></select><% } %></div>
 <% if(patient){ %><div class="col-12"><div class="alert alert-success mb-0"><strong><%= patient.name %></strong> · <%= patient.health_id %> · <%= patient.mobile %></div></div><% } %>
-<div class="col-md-4"><label class="form-label">Department *</label><select name="departmentId" class="form-select" required><option value="">Select</option><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
-<div class="col-md-4"><label class="form-label">Doctor *</label><select name="doctorId" class="form-select" required><option value="">Select</option><% doctors.forEach(function(d){ %><option value="<%= d.id %>"><%= d.doctor_name %> — ₹<%= Number(d.consultation_fee||0).toFixed(0) %></option><% }) %></select></div>
-<div class="col-md-4"><label class="form-label">Appointment Date *</label><input type="date" name="appointmentDate" class="form-control" min="<%= today %>" required></div>
-<div class="col-md-4"><label class="form-label">Slot Time *</label><input type="time" name="slotTime" class="form-control" required></div>
+<div class="col-md-4"><label class="form-label">Department *</label><select name="departmentId" id="agentDepartmentId" class="form-select" required><option value="">Select department</option><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
+<div class="col-md-4"><label class="form-label">Doctor *</label><select name="doctorId" id="agentDoctorId" class="form-select" required disabled><option value="">Select department first</option></select><div id="doctorStatus" class="form-text"></div></div>
+<div class="col-md-4"><label class="form-label">Appointment Date *</label><input type="text" name="appointmentDate" id="agentAppointmentDate" class="form-control" value="" placeholder="Select an available date" autocomplete="off" required><div id="dateStatus" class="form-text">Select a doctor first.</div></div>
+<div class="col-12"><label class="form-label">Available Slots *</label><div id="agentSlotContainer" class="border rounded p-3 bg-light" style="min-height:72px"><span class="text-muted small">Select a doctor and date to see available slots.</span></div><input type="hidden" name="slotTime" id="agentSlotTime" required><div id="slotStatus" class="form-text"></div></div>
 <div class="col-md-8"><label class="form-label">Reason</label><input name="reason" class="form-control"></div>
 </div></div></div>
 <% if (patient && String(patient.gender || '').toLowerCase() === 'female') { %>
@@ -14,3 +14,58 @@
   <%- include('../partials/pregnancy-assessment', { pregnancy: patient, pregnancyCalculation: null }) %>
 </div>
 <% } %><div class="text-end"><button class="btn btn-primary btn-lg">Book OPD Appointment</button></div></form>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script>
+(function(){
+  const form=document.querySelector('form[action="/agent/opd"]');
+  const departmentSel=document.getElementById('agentDepartmentId');
+  const doctorSel=document.getElementById('agentDoctorId');
+  const dateInput=document.getElementById('agentAppointmentDate');
+  const slotContainer=document.getElementById('agentSlotContainer');
+  const slotTime=document.getElementById('agentSlotTime');
+  const submitBtn=form.querySelector('button[type="submit"]');
+  const doctorStatus=document.getElementById('doctorStatus');
+  const dateStatus=document.getElementById('dateStatus');
+  const slotStatus=document.getElementById('slotStatus');
+  const branchId='<%= patient ? patient.branch_id : "" %>';
+  let picker=null,availableDates=new Set(),requestId=0;
+  function initPicker(){
+    if(picker || !window.flatpickr) return;
+    picker=flatpickr(dateInput,{dateFormat:'Y-m-d',minDate:'<%= today %>',disable:[d=>!availableDates.has(picker.formatDate(d,'Y-m-d'))],onChange:(_,value)=>loadSlots(value)});
+  }
+  function resetSlots(message){availableDates=new Set();slotTime.value='';slotContainer.innerHTML='<span class="text-muted small">'+message+'</span>';slotStatus.textContent='';if(picker){picker.clear();picker.set('enable',[]);}else dateInput.value='';}
+  async function loadDoctors(){
+    const id=++requestId,departmentId=departmentSel.value;
+    resetSlots('Select a doctor and date to see available slots.');
+    doctorSel.disabled=true; doctorSel.innerHTML='<option value="">'+(departmentId?'Loading doctors…':'Select department first')+'</option>';
+    if(!departmentId || !branchId){doctorStatus.textContent='';return;}
+    try{
+      const response=await fetch('/doctors/api/list?branchId='+encodeURIComponent(branchId)+'&departmentId='+encodeURIComponent(departmentId),{headers:{Accept:'application/json'}});
+      const data=await response.json();if(id!==requestId)return;if(!response.ok)throw new Error(data.message||'Unable to load doctors');
+      doctorSel.innerHTML='<option value="">Select doctor</option>';(data.doctors||[]).forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name+(d.consultation_fee!=null?' — ₹'+Number(d.consultation_fee||0).toFixed(0):'');doctorSel.appendChild(o);});
+      doctorSel.disabled=!(data.doctors||[]).length;doctorStatus.textContent=doctorSel.disabled?'No active doctor found for this department.':'Select a doctor to view dates.';initPicker();
+    }catch(e){if(id!==requestId)return;doctorSel.innerHTML='<option value="">Unable to load doctors</option>';doctorStatus.textContent=e.message||'Unable to load doctors.';}
+  }
+  async function loadDates(){
+    const id=++requestId,doctorId=doctorSel.value;initPicker();resetSlots('Loading available OPD dates…');if(!doctorId)return;
+    try{
+      const r=await fetch('/doctors/'+encodeURIComponent(doctorId)+'/available-dates?from='+encodeURIComponent('<%= today %>')+'&days=90',{headers:{Accept:'application/json'}});const data=await r.json();if(id!==requestId)return;if(!r.ok)throw new Error(data.message||'Unable to load available dates');
+      availableDates=new Set((data.dates||[]).map(String));picker.set('enable',[d=>availableDates.has(picker.formatDate(d,'Y-m-d'))]);dateStatus.textContent=availableDates.size?'Only this doctor’s OPD dates are enabled.':'No OPD dates available for this doctor in the next 90 days.';
+    }catch(e){dateStatus.textContent=e.message||'Unable to load doctor availability.';}
+  }
+  async function loadSlots(date){
+    const doctorId=doctorSel.value;if(!doctorId||!date)return;slotTime.value='';submitBtn.disabled=true;slotContainer.innerHTML='<span class="text-muted small">Loading available slots…</span>';slotStatus.textContent='';
+    try{
+      const r=await fetch('/doctors/'+encodeURIComponent(doctorId)+'/slots?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});const data=await r.json();if(!r.ok)throw new Error(data.message||'Unable to load slots');
+      const slots=data.slots||[];if(!slots.length){slotContainer.innerHTML='<span class="text-muted small">No available slots for this date.</span>';return;}
+      slotContainer.innerHTML=slots.map(s=>{const t=String(s.time||s.slot_time||'').slice(0,5);return '<button type="button" class="btn btn-outline-primary btn-sm me-2 mb-2" data-slot-time="'+t+'">'+(s.label||t)+'</button>';}).join('');
+      slotContainer.querySelectorAll('[data-slot-time]').forEach(btn=>btn.addEventListener('click',()=>{slotTime.value=btn.dataset.slotTime;slotContainer.querySelectorAll('[data-slot-time]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');slotStatus.textContent='Selected slot: '+btn.textContent;submitBtn.disabled=false;}));
+    }catch(e){slotContainer.innerHTML='<span class="text-danger small">'+(e.message||'Unable to load slots.')+'</span>';}
+  }
+  departmentSel.addEventListener('change',loadDoctors);doctorSel.addEventListener('change',loadDates);initPicker();
+  <% if (patient) { %>loadDoctors();<% } %>
+  form.addEventListener('submit',e=>{if(!doctorSel.value||!dateInput.value||!slotTime.value){e.preventDefault();alert('Select doctor, available date and slot before booking.');}});
+})();
+</script>
