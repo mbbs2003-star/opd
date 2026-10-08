@@ -328,6 +328,19 @@ async function showVitals(req, res, next) {
 }
 
 async function saveVitals(req, res, next) {
+  // Normalize optional form values to SQL-safe nulls. This is especially
+  // important for receptionist forms where an empty field is submitted as "".
+  req.body = {
+    ...req.body,
+    bp: String(req.body.bp || '').trim() || null,
+    pulse: String(req.body.pulse || '').trim() || null,
+    spo2: String(req.body.spo2 || '').trim() || null,
+    temperature: String(req.body.temperature || '').trim() || null,
+    heightCm: String(req.body.heightCm || '').trim() || null,
+    weightKg: String(req.body.weightKg || '').trim() || null,
+    respiratoryRate: String(req.body.respiratoryRate || '').trim() || null,
+    painScore: String(req.body.painScore || '').trim() || null
+  };
   try {
     const [[visit]] = await pool.execute(
       `SELECT v.id, v.appointment_id, p.gender
