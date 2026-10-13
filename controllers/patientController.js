@@ -8,7 +8,8 @@ const barcodeService = require('../services/barcodeService');
 async function showNewForm(req, res, next) {
   try {
     const [branches] = await pool.execute('SELECT id, code, name FROM branches WHERE is_active = 1');
-    res.render('patients/new', { title: 'New Patient Registration', branches, prefillMobile: req.query.mobile || '' });
+    const [referralProviders] = await pool.execute('SELECT id, provider_name, referral_code FROM referral_providers WHERE is_active = 1 ORDER BY provider_name');
+    res.render('patients/new', { title: 'New Patient Registration', branches, referralProviders, prefillMobile: req.query.mobile || '' });
   } catch (err) {
     next(err);
   }
