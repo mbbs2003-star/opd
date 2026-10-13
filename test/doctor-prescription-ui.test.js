@@ -263,7 +263,7 @@ test('prescription save auto-registers medicine name and composition in medicine
   assert.match(service, /WHERE name = :name AND \(composition <=> :composition\)/);
   assert.match(service, /INSERT INTO pharmacy_medicines/);
   assert.match(service, /branch_id, medicine_id, sku, name, generic_name, strength, dosage_form/);
-  assert.match(service, /mrp, purchase_rate, sale_rate, reorder_level, prescription_required, created_by/);
+  assert.match(service, /VALUES\\s*\\n\\s*\\(:branchId, :medicineId, :sku, :name, :composition, NULL, :form,\\s*0, 0, 0, 0, 1, :createdBy\\)/);
   assert.match(service, /mrp, purchase_rate, sale_rate, reorder_level, prescription_required, created_by\)\s*\)\s*VALUES[\s\S]*?0, 0, 0, 0, 1/);
   assert.match(service, /medicineId,\s*name,\s*composition,\s*medicineForm: form/);
 });
