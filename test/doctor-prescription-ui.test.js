@@ -231,3 +231,39 @@ test('OPD booking marks full slots red and prevents selecting them', () => {
   const schedule = fs.readFileSync(path.join(__dirname, '..', 'services', 'scheduleService.js'), 'utf8');
   assert.match(schedule, /available: Math\.max\(0, capacity - bookedCount\)/);
 });
+
+
+test('doctor Rx editor uses readable frequencies and responsive medicine cards without horizontal table scrolling', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'doctors', 'consultation.ejs'), 'utf8');
+  assert.match(view, /\['1 time daily','1 time daily'\]/);
+  assert.match(view, /\['2 times daily','2 times daily'\]/);
+  assert.match(view, /\['3 times daily','3 times daily'\]/);
+  assert.match(view, /\['4 times daily','4 times daily'\]/);
+  assert.match(view, /\['As needed','As needed'\]/);
+  assert.match(view, /rx-medication-card/);
+  assert.match(view, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(view, /min-height:44px;font-size:1rem/);
+  assert.doesNotMatch(view, /table-responsive rx-editor-scroll/);
+  assert.doesNotMatch(view, /const freq = \['OD','BD','TDS','QDS','SOS'\]/);
+});
+
+test('plain-language frequency prints correctly in English and Bengali', () => {
+  const textUtil = require('../utils/prescriptionText');
+  const twice = textUtil.describeItem({ medicine_form: 'Tablet', dosage: '1', frequency: '2 times daily', route: 'P/O', duration: '7 days', instructions: 'After food' });
+  assert.match(twice.english, /twice daily/);
+  assert.match(twice.bengali, /দিনে 02 বার/);
+  const asNeeded = textUtil.describeItem({ medicine_form: 'Tablet', dosage: '1', frequency: 'As needed', route: 'P/O', duration: '7 days', instructions: 'After food' });
+  assert.match(asNeeded.english, /as needed/);
+  assert.match(asNeeded.bengali, /প্রয়োজনে/);
+});
+
+test('prescription save auto-registers medicine name and composition in medicine and pharmacy catalogues', () => {
+  const service = fs.readFileSync(path.join(__dirname, '..', 'services', 'prescriptionService.js'), 'utf8');
+  assert.match(service, /INSERT INTO medicines \(name, strength, composition, form, is_active\)/);
+  assert.match(service, /WHERE name = :name AND \(composition <=> :composition\)/);
+  assert.match(service, /INSERT INTO pharmacy_medicines/);
+  assert.match(service, /branch_id, medicine_id, sku, name, generic_name, strength, dosage_form/);
+  assert.match(service, /VALUES\s*\n\s*\(:branchId, :medicineId, :sku, :name, :composition, NULL, :form,\s*0, 0, 0, 0, 1, :createdBy\)/);
+  assert.match(service, /mrp, purchase_rate, sale_rate, reorder_level, prescription_required, created_by\)\s*\)\s*VALUES[\s\S]*?0, 0, 0, 0, 1/);
+  assert.match(service, /medicineId,\s*name,\s*composition,\s*medicineForm: form/);
+});
