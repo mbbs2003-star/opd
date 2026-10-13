@@ -1,11 +1,13 @@
 const { pool } = require('../config/database');
 const settingsService = require('../services/settingsService');
 const liveOpdService = require('../services/liveOpdService');
+const blogService = require('../services/blogService');
+const AppError = require('../utils/AppError');
 
 async function home(req, res, next) {
   if (req.user) return res.redirect('/dashboard');
   try {
-    const [liveSummary, [doctors], [departments]] = await Promise.all([
+    const [liveSummary, [doctors], [departments], blogs] = await Promise.all([
       liveOpdService.getPublicSummary(),
       pool.execute(
         `SELECT u.name, d.specialisation, d.qualification, dept.name AS department_name
@@ -13,7 +15,8 @@ async function home(req, res, next) {
          LEFT JOIN departments dept ON dept.id = d.department_id
          WHERE d.deleted_at IS NULL AND d.is_active = 1 ORDER BY u.name LIMIT 6`
       ),
-      pool.execute('SELECT name FROM departments WHERE is_active = 1 ORDER BY name LIMIT 8')
+      pool.execute('SELECT name FROM departments WHERE is_active = 1 ORDER BY name LIMIT 8'),
+      blogService.listPublished(3)
     ]);
     res.render('public/home', {
       layout: 'layouts/landing',
@@ -21,7 +24,8 @@ async function home(req, res, next) {
       currentPage: 'home',
       liveSummary,
       doctors,
-      departments
+      departments,
+      blogs
     });
   } catch (err) {
     next(err);
@@ -53,6 +57,21 @@ async function doctors(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+async function blogs(req, res, next) {
+  try {
+    const posts = await blogService.listPublished(30);
+    res.render('public/blogs', { layout: 'layouts/landing', title: 'Health & Wellness Blog', currentPage: 'blog', posts });
+  } catch (err) { next(err); }
+}
+
+async function blogDetail(req, res, next) {
+  try {
+    const post = await blogService.getPublishedBySlug(req.params.slug);
+    if (!post) throw new AppError('Blog post not found', 404);
+    res.render('public/blog-detail', { layout: 'layouts/landing', title: post.title, currentPage: 'blog', post });
+  } catch (err) { next(err); }
 }
 
 function labDiagnostics(req, res) {
@@ -101,4 +120,4 @@ async function liveOpdJson(req, res, next) {
   }
 }
 
-module.exports = { home, patientPortalInfo, services, doctors, labDiagnostics, contact, liveOpd, liveOpdJson };
+module.exports = { home, patientPortalInfo, services, doctors, blogs, blogDetail, labDiagnostics, contact, liveOpd, liveOpdJson };

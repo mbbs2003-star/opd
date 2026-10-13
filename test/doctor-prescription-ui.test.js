@@ -211,3 +211,59 @@ test('doctor diagnostic selector renders checkbox list and custom add-test contr
   assert.match(source, /Add Test/);
   assert.match(source, /CBC \(Complete Blood Count\)/);
 });
+
+
+test('receptionist patient registration offers active referral providers with both name and code', () => {
+  const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'patientController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'patients', 'new.ejs'), 'utf8');
+  assert.match(controller, /SELECT id, provider_name, referral_code FROM referral_providers WHERE is_active = 1 ORDER BY provider_name/);
+  assert.match(controller, /referralProviders/);
+  assert.match(view, /name="referralProviderId"/);
+  assert.match(view, /<%= r\.provider_name %> — <%= r\.referral_code %>/);
+});
+
+test('OPD booking marks full slots red and prevents selecting them', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'opd', 'book.ejs'), 'utf8');
+  assert.match(view, /slot\.available != null/);
+  assert.match(view, /btn-danger/);
+  assert.match(view, /disabled aria-disabled="true" title="Already booked"/);
+  assert.match(view, /if \(button\.disabled\) return/);
+  const schedule = fs.readFileSync(path.join(__dirname, '..', 'services', 'scheduleService.js'), 'utf8');
+  assert.match(schedule, /available: Math\.max\(0, capacity - bookedCount\)/);
+});
+
+
+test('doctor Rx editor uses readable frequencies and responsive medicine cards without horizontal table scrolling', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'doctors', 'consultation.ejs'), 'utf8');
+  assert.match(view, /\['1 time daily','1 time daily'\]/);
+  assert.match(view, /\['2 times daily','2 times daily'\]/);
+  assert.match(view, /\['3 times daily','3 times daily'\]/);
+  assert.match(view, /\['4 times daily','4 times daily'\]/);
+  assert.match(view, /\['As needed','As needed'\]/);
+  assert.match(view, /rx-medication-card/);
+  assert.match(view, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(view, /min-height:44px;font-size:1rem/);
+  assert.doesNotMatch(view, /table-responsive rx-editor-scroll/);
+  assert.doesNotMatch(view, /const freq = \['OD','BD','TDS','QDS','SOS'\]/);
+});
+
+test('plain-language frequency prints correctly in English and Bengali', () => {
+  const textUtil = require('../utils/prescriptionText');
+  const twice = textUtil.describeItem({ medicine_form: 'Tablet', dosage: '1', frequency: '2 times daily', route: 'P/O', duration: '7 days', instructions: 'After food' });
+  assert.match(twice.english, /twice daily/);
+  assert.match(twice.bengali, /দিনে 02 বার/);
+  const asNeeded = textUtil.describeItem({ medicine_form: 'Tablet', dosage: '1', frequency: 'As needed', route: 'P/O', duration: '7 days', instructions: 'After food' });
+  assert.match(asNeeded.english, /as needed/);
+  assert.match(asNeeded.bengali, /প্রয়োজনে/);
+});
+
+test('prescription save auto-registers medicine name and composition in medicine and pharmacy catalogues', () => {
+  const service = fs.readFileSync(path.join(__dirname, '..', 'services', 'prescriptionService.js'), 'utf8');
+  assert.match(service, /INSERT INTO medicines \(name, strength, composition, form, is_active\)/);
+  assert.match(service, /WHERE name = :name AND \(composition <=> :composition\)/);
+  assert.match(service, /INSERT INTO pharmacy_medicines/);
+  assert.match(service, /branch_id, medicine_id, sku, name, generic_name, strength, dosage_form/);
+  assert.match(service, /VALUES\s*\n\s*\(:branchId, :medicineId, :sku, :name, :composition, NULL, :form,\s*0, 0, 0, 0, 1, :createdBy\)/);
+  assert.match(service, /mrp, purchase_rate, sale_rate, reorder_level, prescription_required, created_by\)\s*\)\s*VALUES[\s\S]*?0, 0, 0, 0, 1/);
+  assert.match(service, /medicineId,\s*name,\s*composition,\s*medicineForm: form/);
+});

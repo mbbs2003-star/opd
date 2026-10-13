@@ -303,11 +303,13 @@
       slotContainer.innerHTML = slots.map(function(slot) {
         const time = String(slot.time || slot.slot_time || '').slice(0, 5);
         const label = slot.label || time;
-        return '<button type="button" class="btn btn-outline-primary btn-sm me-2 mb-2" data-slot-time="' +
-          time.replace(/"/g, '&quot;') + '">' + label + '</button>';
+        const full = Number(slot.available != null ? slot.available : (Number(slot.capacity || 1) - Number(slot.booked || 0))) <= 0;
+        return '<button type="button" class="btn btn-sm me-2 mb-2 ' + (full ? 'btn-danger' : 'btn-outline-primary') + '" data-slot-time="' +
+          time.replace(/"/g, '&quot;') + '"' + (full ? ' disabled aria-disabled="true" title="Already booked"' : '') + '>' + label + (full ? ' · Booked' : '') + '</button>';
       }).join('');
       slotContainer.querySelectorAll('[data-slot-time]').forEach(function(button) {
         button.addEventListener('click', function() {
+          if (button.disabled) return;
           slotTimeField.value = button.dataset.slotTime;
           slotContainer.querySelectorAll('[data-slot-time]').forEach(function(item) {
             item.classList.remove('active');

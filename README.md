@@ -21,9 +21,14 @@ The project provides a public clinic website, staff/admin OPD operations, doctor
 - Patient portal information page
 - Contact page
 - Public Live OPD board
+- Public Health Blog with doctor-authored articles, image uploads, and YouTube embeds
 - Patient Sign Up / Sign In
 - Healthcare photography using free-use Pexels images
 - Mobile/PWA support
+
+### Doctor Health Blog
+
+Doctors with access to the Doctor Portal can create and publish health education articles, save drafts, upload a JPG/PNG/WEBP picture (up to 5 MB), and embed a YouTube video. Published posts appear on the hospital landing page and at `/blog`; each article has a public page. Blog content is escaped as plain text and YouTube links are validated before embedding. Doctors should never include identifiable patient information in public articles.
 
 ### OPD workflow
 

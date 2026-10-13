@@ -1,9 +1,19 @@
 const FREQUENCY = {
+  '1 TIME DAILY': { en: 'once daily', bn: 'দিনে 01 বার' },
+  '2 TIMES DAILY': { en: 'twice daily', bn: 'দিনে 02 বার' },
+  '3 TIMES DAILY': { en: 'three times daily', bn: 'দিনে 03 বার' },
+  '4 TIMES DAILY': { en: 'four times daily', bn: 'দিনে 04 বার' },
+  'AS NEEDED': { en: 'as needed', bn: 'প্রয়োজনে' },
   OD: { en: 'once daily', bn: 'দিনে 01 বার' },
+  QD: { en: 'once daily', bn: 'দিনে 01 বার' },
   BD: { en: 'twice daily', bn: 'দিনে 02 বার' },
+  BID: { en: 'twice daily', bn: 'দিনে 02 বার' },
   TDS: { en: 'three times daily', bn: 'দিনে 03 বার' },
+  TID: { en: 'three times daily', bn: 'দিনে 03 বার' },
   QDS: { en: 'four times daily', bn: 'দিনে 04 বার' },
-  SOS: { en: 'as needed', bn: 'প্রয়োজনে' }
+  QID: { en: 'four times daily', bn: 'দিনে 04 বার' },
+  SOS: { en: 'as needed', bn: 'প্রয়োজনে' },
+  PRN: { en: 'as needed', bn: 'প্রয়োজনে' }
 };
 const ROUTE = {
   'P/O': { en: 'by mouth', bn: 'মুখে' }, 'P/V': { en: 'by vaginal route', bn: 'যোনিপথে' },
@@ -25,7 +35,7 @@ function describeItem(item) {
   const formKey = String(item.medicine_form || '').trim().toLowerCase();
   const form = FORM[formKey] || { en: formKey || 'medicine', bn: formKey || 'ওষুধ' };
   const dose = String(item.dosage || '').trim() || '1';
-  const frequencyKey = normalizeKey(item.frequency).split(/[,\s]+/)[0];
+  const frequencyKey = normalizeKey(item.frequency).replace(/\s+/g, ' ');
   const frequency = FREQUENCY[frequencyKey] || { en: String(item.frequency || '').trim(), bn: String(item.frequency || '').trim() };
   const routeKey = normalizeKey(item.route);
   const route = ROUTE[routeKey] || { en: String(item.route || '').trim(), bn: String(item.route || '').trim() };
