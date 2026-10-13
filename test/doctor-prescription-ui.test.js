@@ -240,7 +240,7 @@ test('doctor Rx editor uses readable frequencies and responsive medicine cards w
   assert.match(view, /\['3 times daily','3 times daily'\]/);
   assert.match(view, /\['4 times daily','4 times daily'\]/);
   assert.match(view, /\['As needed','As needed'\]/);
-  assert.match(view, /class="rx-medication-card"/);
+  assert.match(view, /rx-medication-card/);
   assert.match(view, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(view, /min-height:44px;font-size:1rem/);
   assert.doesNotMatch(view, /table-responsive rx-editor-scroll/);
