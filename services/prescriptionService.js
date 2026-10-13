@@ -41,7 +41,7 @@ function itemsFromBody(body) {
       composition: compositions[i] || null,
       medicineForm: forms[i] || null,
       dosage: dosages[i] || null,
-      frequency: frequencies[i] || 'OD',
+      frequency: frequencies[i] || '1 time daily',
       duration: durations[i] || '7 days',
       // Oral administration is the safe default in the doctor prescription form.
       route: routes[i] || 'P/O',
