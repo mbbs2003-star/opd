@@ -21,7 +21,9 @@ const blogImageUpload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => {
-    if (!allowed.has(file.mimetype)) return cb(new Error('Blog images must be JPG, PNG, or WEBP (maximum 5 MB).'));
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const expectedExt = allowed.get(file.mimetype);
+    if (!expectedExt || ext !== expectedExt) return cb(new Error('Blog images must be valid JPG, PNG, or WEBP files (maximum 5 MB).'));
     cb(null, true);
   }
 });
