@@ -58,3 +58,13 @@ test('blog articles escape author-provided text and only embed validated YouTube
   assert.match(service, /\^\[A-Za-z0-9_-\]\{11\}\$/);
   assert.match(service, /host === 'youtube\.com'/);
 });
+
+test('YouTube link parser accepts common YouTube formats and rejects unrelated hosts', () => {
+  const { youtubeVideoId } = require('../services/blogService');
+  assert.equal(youtubeVideoId('https://www.youtube.com/watch?v=abcdefghijk'), 'abcdefghijk');
+  assert.equal(youtubeVideoId('https://youtu.be/abcdefghijk'), 'abcdefghijk');
+  assert.equal(youtubeVideoId('https://youtube.com/shorts/abcdefghijk'), 'abcdefghijk');
+  assert.equal(youtubeVideoId('https://example.com/watch?v=abcdefghijk'), null);
+  assert.equal(youtubeVideoId('javascript:alert(1)'), null);
+  assert.equal(youtubeVideoId('https://youtube.com/watch?v=short'), null);
+});
