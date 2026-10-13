@@ -5,10 +5,16 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/roles');
 const { csrfProtection } = require('../middleware/csrf');
 const asyncHandler = require('../utils/asyncHandler');
+const doctorBlogController = require('../controllers/doctorBlogController');
+const { blogImageUpload } = require('../utils/blogImageUpload');
 
 router.use(requireAuth);
 
 router.get('/', requirePermission('consultation.create'), asyncHandler(doctorPortalController.dashboard));
+router.get('/blogs', requirePermission('consultation.create'), asyncHandler(doctorBlogController.list));
+router.get('/blogs/new', requirePermission('consultation.create'), asyncHandler(doctorBlogController.newForm));
+router.post('/blogs', requirePermission('consultation.create'), csrfProtection, blogImageUpload.single('image'), asyncHandler(doctorBlogController.create));
+
 router.get('/profile', requirePermission('consultation.create'), asyncHandler(doctorPortalController.profile));
 router.post('/profile', requirePermission('consultation.create'), csrfProtection, asyncHandler(doctorPortalController.updateProfile));
 
