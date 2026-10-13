@@ -211,3 +211,23 @@ test('doctor diagnostic selector renders checkbox list and custom add-test contr
   assert.match(source, /Add Test/);
   assert.match(source, /CBC \(Complete Blood Count\)/);
 });
+
+
+test('receptionist patient registration offers active referral providers with both name and code', () => {
+  const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'patientController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'patients', 'new.ejs'), 'utf8');
+  assert.match(controller, /SELECT id, provider_name, referral_code FROM referral_providers WHERE is_active = 1 ORDER BY provider_name/);
+  assert.match(controller, /referralProviders/);
+  assert.match(view, /name="referralProviderId"/);
+  assert.match(view, /<%= r\.provider_name %> — <%= r\.referral_code %>/);
+});
+
+test('OPD booking marks full slots red and prevents selecting them', () => {
+  const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'opd', 'book.ejs'), 'utf8');
+  assert.match(view, /slot\.available != null/);
+  assert.match(view, /btn-danger/);
+  assert.match(view, /disabled aria-disabled="true" title="Already booked"/);
+  assert.match(view, /if \(button\.disabled\) return/);
+  const schedule = fs.readFileSync(path.join(__dirname, '..', 'services', 'scheduleService.js'), 'utf8');
+  assert.match(schedule, /available: Math\.max\(0, capacity - bookedCount\)/);
+});
