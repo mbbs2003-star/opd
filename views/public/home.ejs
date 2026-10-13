@@ -129,6 +129,24 @@
     </div>
   </section>
 
+  <% if (blogs && blogs.length) { %>
+  <section class="blog-home-section">
+    <div class="container">
+      <div class="blog-section-head"><div><span class="landing-overline">FROM OUR DOCTORS</span><h2>Health insights you can trust.</h2><p>Helpful, patient-friendly articles from the Chhayabithi clinical team.</p></div><a class="blog-section-link" href="/blog">Explore all articles <i class="bi bi-arrow-right ms-1"></i></a></div>
+      <div class="row g-4">
+        <% blogs.forEach(function(post) { %>
+          <div class="col-md-6 col-lg-4"><article class="blog-card h-100">
+            <a href="/blog/<%= post.slug %>" class="blog-card-media">
+              <% if (post.image_path) { %><img src="<%= post.image_path %>" alt="" loading="lazy"><% } else { %><span class="blog-card-placeholder"><i class="bi <%= post.youtube_video_id ? 'bi-play-circle-fill' : 'bi-journal-medical' %>"></i></span><% } %>
+            </a>
+            <div class="blog-card-body"><div class="blog-card-meta"><span><i class="bi bi-person-badge me-1"></i>Dr. <%= post.doctor_name %></span><span><%= formatDate(post.published_at) %></span></div><h2><a href="/blog/<%= post.slug %>"><%= post.title %></a></h2><p><%= post.excerpt || '' %></p><a class="blog-read-link" href="/blog/<%= post.slug %>">Read article <i class="bi bi-arrow-right"></i></a></div>
+          </article></div>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
   <section class="landing-portal landing-portal-premium">
     <div class="container">
       <div class="landing-portal-card">

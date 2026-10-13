@@ -1,0 +1,19 @@
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div><h1 class="h3 mb-1">My Health Blogs</h1><p class="text-muted mb-0">Write health education articles for the Chhayabithi website.</p></div>
+  <a href="/doctor/blogs/new" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Write a Blog</a>
+</div>
+<% if (!posts.length) { %>
+  <div class="card border-0 shadow-sm"><div class="card-body text-center py-5"><i class="bi bi-journal-medical display-4 text-primary"></i><h2 class="h5 mt-3">Your first article starts here</h2><p class="text-muted">Add helpful health information, upload a picture, or include a YouTube video.</p><a href="/doctor/blogs/new" class="btn btn-primary">Create your first blog</a></div></div>
+<% } else { %>
+  <div class="row g-3">
+    <% posts.forEach(function(post) { %>
+      <div class="col-md-6 col-xl-4"><article class="card h-100 border-0 shadow-sm overflow-hidden">
+        <% if (post.image_path) { %><img src="<%= post.image_path %>" alt="" class="w-100" style="height:190px;object-fit:cover"><% } else { %><div class="bg-light d-flex align-items-center justify-content-center" style="height:150px"><i class="bi bi-journal-medical display-3 text-primary"></i></div><% } %>
+        <div class="card-body d-flex flex-column"><div class="mb-2"><span class="badge <%= post.status === 'PUBLISHED' ? 'text-bg-success' : 'text-bg-secondary' %>"><%= post.status === 'PUBLISHED' ? 'Published' : 'Draft' %></span><% if (post.youtube_video_id) { %> <span class="badge text-bg-light"><i class="bi bi-youtube text-danger"></i> Video</span><% } %></div>
+          <h2 class="h5"><%= post.title %></h2><p class="text-muted small"><%= post.excerpt || '' %></p>
+          <div class="mt-auto d-flex justify-content-between align-items-center"><small class="text-muted"><%= post.published_at ? formatDate(post.published_at) : 'Not published' %></small><% if (post.status === 'PUBLISHED') { %><a href="/blog/<%= post.slug %>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">View post <i class="bi bi-box-arrow-up-right"></i></a><% } %></div>
+        </div>
+      </article></div>
+    <% }) %>
+  </div>
+<% } %>

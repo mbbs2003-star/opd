@@ -62,6 +62,7 @@ app.use(
         // console-visible server error.
         scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:', 'https://images.pexels.com'],
+        frameSrc: ["'self'", 'https://www.youtube-nocookie.com'],
         fontSrc: ["'self'", 'cdn.jsdelivr.net'],
         upgradeInsecureRequests: appConfig.isProd ? [] : null
       }

@@ -1,0 +1,34 @@
+/* Public doctor-authored health blog */
+.blog-page-hero{padding:4.5rem 0 3.5rem;background:linear-gradient(130deg,#073d3c,#0d6e6e 68%,#2f9e8f);color:#fff}
+.blog-page-hero h1{max-width:850px;font-size:clamp(2rem,4vw,3.35rem);font-weight:800;letter-spacing:-.035em;line-height:1.12;margin:1rem 0}
+.blog-page-hero p{max-width:700px;color:#d7efea;font-size:1.1rem}
+.blog-listing-section{padding-top:3rem;padding-bottom:4rem}
+.blog-card{background:#fff;border:1px solid #e2ecea;border-radius:1.1rem;overflow:hidden;box-shadow:0 12px 32px rgba(8,61,59,.07);display:flex;flex-direction:column;transition:transform .18s ease,box-shadow .18s ease}
+.blog-card:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(8,61,59,.12)}
+.blog-card-media{display:block;height:220px;background:#e8f4f1;overflow:hidden;text-decoration:none}
+.blog-card-media img{width:100%;height:100%;object-fit:cover;display:block}
+.blog-card-placeholder{height:100%;display:flex;align-items:center;justify-content:center;color:#0d6e6e;background:linear-gradient(135deg,#e4f4f0,#f7fbfa);font-size:3.5rem}
+.blog-card-body{padding:1.25rem;display:flex;flex-direction:column;flex:1}
+.blog-card-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;color:#61736f;font-size:.8rem}
+.blog-card h2{font-size:1.28rem;font-weight:750;line-height:1.35;margin:.9rem 0 .6rem}
+.blog-card h2 a{color:#123f3b;text-decoration:none}.blog-card h2 a:hover{color:#0d6e6e}
+.blog-card-body p{color:#5b6d69;line-height:1.65;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+.blog-read-link{margin-top:auto;padding-top:.6rem;color:#0d6e6e;font-weight:700;text-decoration:none}
+.blog-empty{text-align:center;background:#fff;border:1px solid #e2ecea;border-radius:1rem;padding:4rem 1rem}.blog-empty>i{font-size:3rem;color:#0d6e6e}.blog-empty h2{margin-top:1rem;color:#123f3b}
+.blog-detail-wrap{max-width:950px;padding-top:2rem;padding-bottom:4rem}
+.blog-back-link{display:inline-block;color:#0d6e6e;font-weight:650;text-decoration:none;margin-bottom:1.5rem}
+.blog-article{background:#fff;border:1px solid #e2ecea;border-radius:1.2rem;padding:clamp(1.1rem,4vw,3rem);box-shadow:0 12px 35px rgba(8,61,59,.06)}
+.blog-article-header h1{font-size:clamp(2rem,4vw,3.3rem);font-weight:850;line-height:1.12;letter-spacing:-.03em;color:#123f3b;margin:1rem 0}
+.blog-article-excerpt{font-size:1.15rem;line-height:1.7;color:#5b6d69}
+.blog-article-cover{display:block;width:100%;max-height:560px;object-fit:cover;border-radius:.9rem;margin:1.75rem 0}
+.blog-video-frame{position:relative;width:100%;aspect-ratio:16/9;margin:1.75rem 0;background:#102d2c;border-radius:.9rem;overflow:hidden}
+.blog-video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.blog-article-content{white-space:pre-wrap;overflow-wrap:anywhere;font-size:1.06rem;line-height:1.9;color:#263e3a;margin:1.8rem 0}
+.blog-medical-note{background:#edf7f5;color:#345d57;border-radius:.75rem;padding:1rem;line-height:1.6;font-size:.9rem}
+.blog-home-section{padding:4rem 0;background:#f4f9f8}
+.blog-home-section .blog-card-media{height:190px}
+.blog-home-section .blog-section-head{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:1.75rem}
+.blog-home-section .blog-section-head h2{font-size:clamp(1.7rem,3vw,2.45rem);font-weight:800;color:#123f3b;margin:.5rem 0}
+.blog-home-section .blog-section-head p{color:#647773;margin:0}
+.blog-home-section .blog-section-link{color:#0d6e6e;text-decoration:none;font-weight:700;white-space:nowrap}
+@media(max-width:575.98px){.blog-page-hero{padding:3rem 0 2.5rem}.blog-card-media{height:200px}.blog-home-section .blog-section-head{align-items:start;flex-direction:column}.blog-article{border-radius:.7rem}.blog-card-meta{font-size:.76rem}}

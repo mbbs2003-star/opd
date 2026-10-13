@@ -1,0 +1,14 @@
+<%- include('../partials/public-nav') %>
+<main class="clinic-site blog-public-page">
+  <div class="container blog-detail-wrap">
+    <a href="/blog" class="blog-back-link"><i class="bi bi-arrow-left me-2"></i>All health articles</a>
+    <article class="blog-article">
+      <header class="blog-article-header"><div class="blog-card-meta"><span><i class="bi bi-person-badge me-1"></i>Dr. <%= post.doctor_name %><% if (post.specialisation) { %> · <%= post.specialisation %><% } %></span><span><%= formatDate(post.published_at) %></span></div><h1><%= post.title %></h1><% if (post.excerpt) { %><p class="blog-article-excerpt"><%= post.excerpt %></p><% } %></header>
+      <% if (post.image_path) { %><img class="blog-article-cover" src="<%= post.image_path %>" alt="<%= post.title %>"><% } %>
+      <% if (post.youtube_video_id) { %><div class="blog-video-frame"><iframe src="https://www.youtube-nocookie.com/embed/<%= post.youtube_video_id %>" title="YouTube video for <%= post.title %>" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div><% } %>
+      <div class="blog-article-content"><%= post.content %></div>
+      <aside class="blog-medical-note"><i class="bi bi-info-circle me-2"></i>This article is for general health education and does not replace an individual medical consultation. Please consult a qualified clinician for personal medical advice.</aside>
+    </article>
+  </div>
+</main>
+<%- include('../partials/public-footer') %>
