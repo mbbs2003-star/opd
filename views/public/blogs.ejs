@@ -1,0 +1,17 @@
+<%- include('../partials/public-nav') %>
+<main class="clinic-site blog-public-page">
+  <section class="blog-page-hero"><div class="container"><span class="landing-overline">CHHAYABITHI HEALTH JOURNAL</span><h1>Health knowledge, shared by our doctors.</h1><p>Patient-friendly information and insights from the Chhayabithi clinical team.</p></div></section>
+  <section class="container blog-listing-section">
+    <% if (!posts.length) { %><div class="blog-empty"><i class="bi bi-journal-medical"></i><h2>Articles are coming soon</h2><p>Our doctors are preparing helpful health information for you.</p><a href="/" class="btn btn-primary">Back to home</a></div><% } else { %>
+      <div class="row g-4"><% posts.forEach(function(post) { %>
+        <div class="col-md-6 col-xl-4"><article class="blog-card h-100">
+          <a href="/blog/<%= post.slug %>" class="blog-card-media">
+            <% if (post.image_path) { %><img src="<%= post.image_path %>" alt="" loading="lazy"><% } else { %><span class="blog-card-placeholder"><i class="bi <%= post.youtube_video_id ? 'bi-play-circle-fill' : 'bi-journal-medical' %>"></i></span><% } %>
+          </a>
+          <div class="blog-card-body"><div class="blog-card-meta"><span><i class="bi bi-person-badge me-1"></i>Dr. <%= post.doctor_name %></span><span><%= formatDate(post.published_at) %></span></div><h2><a href="/blog/<%= post.slug %>"><%= post.title %></a></h2><p><%= post.excerpt || '' %></p><a class="blog-read-link" href="/blog/<%= post.slug %>">Read article <i class="bi bi-arrow-right"></i></a></div>
+        </article></div>
+      <% }) %></div>
+    <% } %>
+  </section>
+</main>
+<%- include('../partials/public-footer') %>
