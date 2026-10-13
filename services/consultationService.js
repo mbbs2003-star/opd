@@ -175,11 +175,11 @@ async function getConsultationContext(visitId) {
   let pregnancyCalculation = null;
   if (String(visit.gender || '').toLowerCase() === 'female' && visit.pregnancy_status === 'PREGNANT') {
     if (pregnancyMethod === 'USG') {
-      pregnancyCalculation = calculatePregnancyFromUltrasound(visit.usg_date, visit.usg_gestational_age_weeks, visit.usg_gestational_age_days);
+      pregnancyCalculation = calculatePregnancyFromUltrasound(visit.usg_date, visit.usg_gestational_age_weeks, visit.usg_gestational_age_days, visit.appointment_date);
     } else if (pregnancyMethod === 'USG_EDD') {
-      pregnancyCalculation = calculatePregnancyFromUltrasoundEdd(visit.usg_edd);
+      pregnancyCalculation = calculatePregnancyFromUltrasoundEdd(visit.usg_edd, visit.appointment_date);
     } else if (pregnancyMethod === 'CONCEPTION') {
-      pregnancyCalculation = calculatePregnancy(visit.lmp_date);
+      pregnancyCalculation = calculatePregnancy(visit.lmp_date, visit.appointment_date);
       if (pregnancyCalculation) {
         const conceptionDate = new Date(pregnancyCalculation.lmpDate + 'T00:00:00');
         conceptionDate.setDate(conceptionDate.getDate() + 14);
@@ -187,13 +187,13 @@ async function getConsultationContext(visitId) {
         pregnancyCalculation.referenceDate = conceptionDate.toISOString().slice(0, 10);
       }
     } else if (pregnancyMethod === 'EDD') {
-      pregnancyCalculation = calculatePregnancy(visit.lmp_date);
+      pregnancyCalculation = calculatePregnancy(visit.lmp_date, visit.appointment_date);
       if (pregnancyCalculation) {
         pregnancyCalculation.referenceMode = 'EDD';
         pregnancyCalculation.referenceDate = pregnancyCalculation.estimatedDueDate;
       }
     } else {
-      pregnancyCalculation = calculatePregnancy(visit.lmp_date);
+      pregnancyCalculation = calculatePregnancy(visit.lmp_date, visit.appointment_date);
     }
   }
 
@@ -349,16 +349,17 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           datingCalculation = calculatePregnancyFromUltrasound(
             payload.usgDate,
             payload.usgGestationalAgeWeeks,
-            payload.usgGestationalAgeDays
+            payload.usgGestationalAgeDays,
+            visit.appointment_date
           );
         } else if (datingMethod === 'USG_EDD') {
-          datingCalculation = calculatePregnancyFromUltrasoundEdd(payload.usgEdd);
+          datingCalculation = calculatePregnancyFromUltrasoundEdd(payload.usgEdd, visit.appointment_date);
         } else if (datingMethod === 'CONCEPTION') {
-          datingCalculation = calculatePregnancyFromReference(payload.conceptionDate, 'CONCEPTION');
+          datingCalculation = calculatePregnancyFromReference(payload.conceptionDate, 'CONCEPTION', visit.appointment_date);
         } else if (datingMethod === 'EDD') {
-          datingCalculation = calculatePregnancyFromReference(payload.referenceDate || payload.lmpDate, 'EDD');
+          datingCalculation = calculatePregnancyFromReference(payload.referenceDate || payload.lmpDate, 'EDD', visit.appointment_date);
         } else {
-          datingCalculation = calculatePregnancy(payload.lmpDate);
+          datingCalculation = calculatePregnancy(payload.lmpDate, visit.appointment_date);
         }
         if (!datingCalculation) {
           throw new AppError('Invalid pregnancy dating input. Check the LMP/conception/EDD or USG/ultrasound report values.', 400);
@@ -402,7 +403,7 @@ async function saveConsultation(visitId, payload, actorUserId, prescriptionItems
           abortions: isFemale && payload.abortions !== '' && payload.abortions != null ? Math.max(0, Number(payload.abortions)) : null,
           pregnancyStatus,
           datingMethod: pregnancyStatus === 'PREGNANT' ? datingMethod : null,
-          usgDate: pregnancyStatus === 'PREGNANT' && datingMethod.startsWith('USG') ? (payload.usgDate || null) : null,
+          usgDate: pregnancyStatus === 'PREGNANT' && datingMethod === 'USG' ? (payload.usgDate || null) : null,
           usgWeeks: pregnancyStatus === 'PREGNANT' && datingMethod === 'USG' ? Number(payload.usgGestationalAgeWeeks) : null,
           usgDays: pregnancyStatus === 'PREGNANT' && datingMethod === 'USG' ? Number(payload.usgGestationalAgeDays || 0) : null,
           usgEdd: pregnancyStatus === 'PREGNANT' && datingMethod === 'USG_EDD' ? (payload.usgEdd || null) : null,

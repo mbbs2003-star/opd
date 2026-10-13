@@ -9,14 +9,14 @@
       : (initialMode === 'USG' ? (pregnancyData.usg_date ? String(pregnancyData.usg_date).slice(0, 10) : '')
       : (pregnancyData.lmp_date ? String(pregnancyData.lmp_date).slice(0, 10) : '')));
 %>
-<div class="card mb-3 pregnancy-assessment-card" data-pregnancy-widget data-editable="<%= editable ? '1' : '0' %>">
+<div class="card mb-3 pregnancy-assessment-card" data-pregnancy-widget data-editable="<%= editable ? '1' : '0' %>" data-as-of-date="<%= typeof asOfDate !== 'undefined' && asOfDate ? (asOfDate instanceof Date ? [asOfDate.getFullYear(), String(asOfDate.getMonth()+1).padStart(2,'0'), String(asOfDate.getDate()).padStart(2,'0')].join('-') : String(asOfDate).slice(0,10)) : '' %>">
   <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <span><i class="bi bi-gender-female me-1"></i> <strong>Female / Obstetric Assessment</strong></span>
     <span class="badge text-bg-success-subtle text-success-emphasis">Pregnancy dating</span>
   </div>
   <div class="card-body">
     <div class="alert alert-info small mb-3">
-      <strong>Automatic Pregnancy Calculator</strong> — calculate gestational age and EDD from LMP, conception date, or an established EDD. The result is a dating estimate and can be reviewed against ultrasound findings.
+      <strong>Automatic Pregnancy Calculator</strong> — calculate gestational age and EDD from LMP, conception date, an established EDD, or USG / ultrasound dating. Confirm clinical dating against the ultrasound report when appropriate.
     </div>
 
     <div class="row g-3">
@@ -108,9 +108,9 @@
 
 <script>
 (function () {
-  const root = document.querySelector('[data-pregnancy-widget]');
-  if (!root || window.__pregnancyWidgetInitialized) return;
-  window.__pregnancyWidgetInitialized = true;
+  document.querySelectorAll('[data-pregnancy-widget]').forEach(function (root) {
+    if (root.dataset.pregnancyInitialized === '1') return;
+    root.dataset.pregnancyInitialized = '1';
 
   const status = root.querySelector('[data-pregnancy-status]');
   const method = root.querySelector('[data-pregnancy-method]');
@@ -135,6 +135,7 @@
   const conception = root.querySelector('[data-pregnancy-conception]');
   const basis = root.querySelector('[data-pregnancy-basis]');
   const termStatus = root.querySelector('[data-pregnancy-term-status]');
+  const appointmentDateInput = root.closest('form')?.querySelector('[name="appointmentDate"]');
 
   function parseDate(value) {
     const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -151,16 +152,26 @@
     return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
   }
   function display(date) {
-    return date ? date.toLocaleDateString('en-IN') : '—';
+    if (!date) return '—';
+    return String(date.getDate()).padStart(2, '0') + '-' +
+      String(date.getMonth() + 1).padStart(2, '0') + '-' + date.getFullYear();
   }
   function calculate() {
-    const mode = method.value || 'LMP';
+    const mode = String(method.value || 'LMP').toUpperCase();
     datingMethod.value = mode;
+    // Clear values from the previously selected dating method before
+    // populating only the fields that belong to the current method.
+    conceptionInput.value = '';
+    referenceInput.value = '';
+    usgDateInput.value = '';
+    usgEddInput.value = '';
 
     if (status.value !== 'PREGNANT') {
       results.style.display = 'none';
       error.style.display = 'none';
       lmp.value = '';
+      conceptionInput.value = '';
+      referenceInput.value = '';
       usgDateInput.value = '';
       usgEddInput.value = '';
       return true;
@@ -168,7 +179,9 @@
 
     const ref = parseDate(reference.value);
     const today = new Date();
-    const asOf = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const asOf = parseDate(appointmentDateInput && appointmentDateInput.value) ||
+      parseDate(root.dataset.asOfDate) ||
+      new Date(today.getFullYear(), today.getMonth(), today.getDate());
     let calculatedLmp = null;
     let due = null;
     let scanDate = null;
@@ -178,7 +191,7 @@
       if (mode === 'USG') {
         const weeks = Number(usgWeeks.value);
         const days = Number(usgDays.value || 0);
-        if (!scanDate || !Number.isInteger(weeks) || !Number.isInteger(days) || weeks < 0 || weeks > 45 || days < 0 || days > 6) {
+        if (!scanDate || usgWeeks.value.trim() === '' || !Number.isInteger(weeks) || !Number.isInteger(days) || weeks < 0 || weeks > 45 || days < 0 || days > 6) {
           results.style.display = 'none';
           error.style.display = '';
           error.querySelector('.alert').textContent = 'Enter the USG/ultrasound scan date and valid gestational age (weeks 0–45, days 0–6).';
@@ -253,6 +266,10 @@
   method.addEventListener('change', function () { updateLabel(); calculate(); });
   [usgWeeks, usgDays].forEach(function (field) { field.addEventListener('input', calculate); });
   reference.addEventListener('change', calculate);
+  if (appointmentDateInput) {
+    appointmentDateInput.addEventListener('change', calculate);
+    appointmentDateInput.addEventListener('input', calculate);
+  }
   updateLabel();
   calculate();
 
@@ -261,6 +278,7 @@
       event.preventDefault();
       error.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+  });
   });
 })();
 </script>
