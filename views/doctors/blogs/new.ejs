@@ -1,0 +1,18 @@
+<div class="d-flex align-items-center gap-3 mb-4"><a href="/doctor/blogs" class="btn btn-outline-secondary" aria-label="Back to my blogs"><i class="bi bi-arrow-left"></i></a><div><h1 class="h3 mb-1">Write a Health Blog</h1><p class="text-muted mb-0">Your article can appear publicly on the Chhayabithi hospital website.</p></div></div>
+<style>
+.blog-editor-card{max-width:1000px}.blog-editor-card .form-label{font-weight:650}.blog-editor-card .form-control{min-height:46px;font-size:1rem}.blog-editor-card textarea.form-control{min-height:180px}.blog-upload-hint{font-size:.875rem;color:#64748b}
+</style>
+<div class="card border-0 shadow-sm blog-editor-card"><div class="card-body p-3 p-md-4">
+  <form method="POST" action="/doctor/blogs" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="mb-3"><label class="form-label" for="blogTitle">Blog title *</label><input id="blogTitle" name="title" class="form-control" required minlength="5" maxlength="180" placeholder="e.g. Understanding blood pressure" value="<%= formData.title || '' %>"></div>
+    <div class="mb-3"><label class="form-label" for="blogExcerpt">Short summary</label><textarea id="blogExcerpt" name="excerpt" class="form-control" rows="2" maxlength="500" placeholder="A short introduction for the blog card"><%= formData.excerpt || '' %></textarea><div class="form-text">If left empty, the beginning of your article is used.</div></div>
+    <div class="mb-3"><label class="form-label" for="blogContent">Article content *</label><textarea id="blogContent" name="content" class="form-control" required minlength="30" maxlength="100000" rows="12" placeholder="Write clear, patient-friendly health information. Avoid including identifiable patient information."><%= formData.content || '' %></textarea><div class="form-text">Plain text is supported. Paragraph breaks are preserved.</div></div>
+    <div class="row g-3">
+      <div class="col-lg-6"><label class="form-label" for="blogImage">Picture (optional)</label><input id="blogImage" type="file" name="image" class="form-control" accept="image/jpeg,image/png,image/webp"><div class="blog-upload-hint mt-1">JPG, PNG or WEBP · maximum 5 MB.</div></div>
+      <div class="col-lg-6"><label class="form-label" for="youtubeUrl">YouTube video URL (optional)</label><input id="youtubeUrl" type="url" name="youtubeUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=..." value="<%= formData.youtubeUrl || '' %>"><div class="blog-upload-hint mt-1">Use a public YouTube watch, shorts, or youtu.be link.</div></div>
+    </div>
+    <div class="alert alert-info mt-4 mb-3"><i class="bi bi-shield-check me-2"></i>Blogs are public health education content. Do not include patient names, medical record details, or personal health information.</div>
+    <div class="d-flex flex-wrap gap-2 justify-content-end"><a href="/doctor/blogs" class="btn btn-outline-secondary">Cancel</a><button type="submit" name="publish" value="0" class="btn btn-outline-primary">Save Draft</button><button type="submit" name="publish" value="1" class="btn btn-primary"><i class="bi bi-send me-1"></i> Publish to Website</button></div>
+  </form>
+</div></div>
