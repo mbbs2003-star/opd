@@ -211,8 +211,8 @@ async function insertItems(conn, prescriptionId, items, actorUserId) {
     const [[knownMedicine]] = await conn.execute(
       `SELECT id, strength, composition, form
        FROM medicines
-       WHERE name = :name
-       ORDER BY (composition <=> :composition) DESC, (strength IS NULL) DESC, id
+       WHERE name = :name AND (composition <=> :composition)
+       ORDER BY (strength IS NULL) DESC, id
        LIMIT 1 FOR UPDATE`,
       { name, composition }
     );
@@ -241,20 +241,22 @@ async function insertItems(conn, prescriptionId, items, actorUserId) {
     // stock. Pharmacy staff must still record batch and expiry through GRN.
     if (branchId && medicineId) {
       const [[pharmacyMedicine]] = await conn.execute(
-        `SELECT id, generic_name, dosage_form
+        `SELECT id, medicine_id, generic_name, dosage_form
          FROM pharmacy_medicines
-         WHERE branch_id = :branchId AND medicine_id = :medicineId
+         WHERE branch_id = :branchId
+           AND (medicine_id = :medicineId OR (LOWER(name) = LOWER(:name) AND (generic_name <=> :composition)))
          LIMIT 1 FOR UPDATE`,
-        { branchId, medicineId }
+        { branchId, medicineId, name, composition }
       );
       if (pharmacyMedicine) {
         if ((!pharmacyMedicine.generic_name && composition) || (!pharmacyMedicine.dosage_form && form)) {
           await conn.execute(
             `UPDATE pharmacy_medicines
-             SET generic_name = COALESCE(NULLIF(generic_name, ''), :composition),
+             SET medicine_id = COALESCE(medicine_id, :medicineId),
+                 generic_name = COALESCE(NULLIF(generic_name, ''), :composition),
                  dosage_form = COALESCE(NULLIF(dosage_form, ''), :form)
              WHERE id = :id`,
-            { composition, form, id: pharmacyMedicine.id }
+            { medicineId, composition, form, id: pharmacyMedicine.id }
           );
         }
       } else {
