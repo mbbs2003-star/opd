@@ -98,7 +98,7 @@ async function createPrescription(visitId, items, actorUserId) {
     const prescriptionId = result.insertId;
 
     await rememberPrescriptionOptions(conn, items, actorUserId);
-    await insertItems(conn, prescriptionId, items);
+    await insertItems(conn, prescriptionId, items, actorUserId);
 
     await auditService.log(
       {
@@ -159,7 +159,7 @@ async function savePrescriptionInTransaction(conn, visit, items, actorUserId, rx
 
   const prescriptionId = result.insertId;
   await rememberPrescriptionOptions(conn, items, actorUserId);
-  await insertItems(conn, prescriptionId, items);
+  await insertItems(conn, prescriptionId, items, actorUserId);
 
   await auditService.log(
     {
@@ -191,19 +191,103 @@ async function rememberPrescriptionOptions(conn, items, actorUserId) {
   }
 }
 
-async function insertItems(conn, prescriptionId, items) {
+async function insertItems(conn, prescriptionId, items, actorUserId) {
+  const [[prescriptionContext]] = await conn.execute(
+    `SELECT v.branch_id
+     FROM prescriptions p JOIN opd_visits v ON v.id = p.visit_id
+     WHERE p.id = :prescriptionId`,
+    { prescriptionId }
+  );
+  const branchId = prescriptionContext?.branch_id || null;
+
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
+    const name = String(it.medicineName || '').trim();
+    const composition = String(it.composition || '').trim() || null;
+    const form = String(it.medicineForm || '').trim() || null;
+
+    // Register new medicines automatically when a doctor prescribes them.
+    let medicineId = null;
+    const [[knownMedicine]] = await conn.execute(
+      `SELECT id, strength, composition, form
+       FROM medicines
+       WHERE name = :name
+       ORDER BY (composition <=> :composition) DESC, (strength IS NULL) DESC, id
+       LIMIT 1 FOR UPDATE`,
+      { name, composition }
+    );
+
+    if (knownMedicine) {
+      medicineId = knownMedicine.id;
+      if ((!knownMedicine.composition && composition) || (!knownMedicine.form && form)) {
+        await conn.execute(
+          `UPDATE medicines
+           SET composition = COALESCE(NULLIF(composition, ''), :composition),
+               form = COALESCE(NULLIF(form, ''), :form)
+           WHERE id = :id`,
+          { composition, form, id: medicineId }
+        );
+      }
+    } else {
+      const [createdMedicine] = await conn.execute(
+        `INSERT INTO medicines (name, strength, composition, form, is_active)
+         VALUES (:name, NULL, :composition, :form, 1)`,
+        { name, composition, form }
+      );
+      medicineId = createdMedicine.insertId;
+    }
+
+    // Add the medicine to this branch's pharmacy catalogue without inventing
+    // stock. Pharmacy staff must still record batch and expiry through GRN.
+    if (branchId && medicineId) {
+      const [[pharmacyMedicine]] = await conn.execute(
+        `SELECT id, generic_name, dosage_form
+         FROM pharmacy_medicines
+         WHERE branch_id = :branchId AND medicine_id = :medicineId
+         LIMIT 1 FOR UPDATE`,
+        { branchId, medicineId }
+      );
+      if (pharmacyMedicine) {
+        if ((!pharmacyMedicine.generic_name && composition) || (!pharmacyMedicine.dosage_form && form)) {
+          await conn.execute(
+            `UPDATE pharmacy_medicines
+             SET generic_name = COALESCE(NULLIF(generic_name, ''), :composition),
+                 dosage_form = COALESCE(NULLIF(dosage_form, ''), :form)
+             WHERE id = :id`,
+            { composition, form, id: pharmacyMedicine.id }
+          );
+        }
+      } else {
+        await conn.execute(
+          `INSERT INTO pharmacy_medicines
+            (branch_id, medicine_id, sku, name, generic_name, strength, dosage_form,
+             mrp, purchase_rate, sale_rate, reorder_level, prescription_required, created_by)
+           VALUES
+            (:branchId, :medicineId, :sku, :name, :composition, NULL, :form,
+             0, 0, 0, 0, 1, :createdBy)`,
+          {
+            branchId,
+            medicineId,
+            sku: `RX-${branchId}-${medicineId}`,
+            name,
+            composition,
+            form,
+            createdBy: actorUserId
+          }
+        );
+      }
+    }
+
     await conn.execute(
       `INSERT INTO prescription_items
         (prescription_id, medicine_id, medicine_name_freetext, composition, medicine_form, dosage, frequency, duration, route, quantity, instructions, sort_order)
        VALUES (:prescriptionId, :medicineId, :name, :composition, :medicineForm, :dosage, :frequency, :duration, :route, :quantity, :instructions, :sortOrder)`,
       {
         prescriptionId,
-        medicineId: it.medicineId || null,
-        name: it.medicineName,
-        composition: it.composition || null,
-        medicineForm: it.medicineForm || null,
+        medicineId,
+        name,
+        composition,
+        medicineForm: form,
         dosage: it.dosage || null,
         frequency: it.frequency || null,
         duration: it.duration || null,
@@ -255,7 +339,7 @@ async function amendPrescription(prescriptionId, items, reason, actorUserId) {
     const newId = result.insertId;
 
     await rememberPrescriptionOptions(conn, items, actorUserId);
-    await insertItems(conn, newId, items);
+    await insertItems(conn, newId, items, actorUserId);
 
     await auditService.log(
       {
