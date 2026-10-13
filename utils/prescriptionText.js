@@ -35,7 +35,7 @@ function describeItem(item) {
   const formKey = String(item.medicine_form || '').trim().toLowerCase();
   const form = FORM[formKey] || { en: formKey || 'medicine', bn: formKey || 'ওষুধ' };
   const dose = String(item.dosage || '').trim() || '1';
-  const frequencyKey = normalizeKey(item.frequency).replace(/\\s+/g, ' ');
+  const frequencyKey = normalizeKey(item.frequency).replace(/\s+/g, ' ');
   const frequency = FREQUENCY[frequencyKey] || { en: String(item.frequency || '').trim(), bn: String(item.frequency || '').trim() };
   const routeKey = normalizeKey(item.route);
   const route = ROUTE[routeKey] || { en: String(item.route || '').trim(), bn: String(item.route || '').trim() };
