@@ -1,6 +1,12 @@
 const crypto = require('crypto');
 const { pool } = require('../config/database');
 
+function validationError(message) {
+  const err = new Error(message);
+  err.name = 'BlogValidationError';
+  return err;
+}
+
 function slugify(value) {
   const slug = String(value || '').normalize('NFKD').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 170);
@@ -25,10 +31,10 @@ function youtubeVideoId(value) {
 async function createPost({ doctorId, title, excerpt, content, imagePath, youtubeUrl, publish }) {
   const cleanTitle = String(title || '').trim();
   const cleanContent = String(content || '').trim();
-  if (cleanTitle.length < 5 || cleanTitle.length > 180) throw new Error('Title must be between 5 and 180 characters.');
-  if (cleanContent.length < 30 || cleanContent.length > 100000) throw new Error('Blog content must be between 30 and 100,000 characters.');
+  if (cleanTitle.length < 5 || cleanTitle.length > 180) throw validationError('Title must be between 5 and 180 characters.');
+  if (cleanContent.length < 30 || cleanContent.length > 100000) throw validationError('Blog content must be between 30 and 100,000 characters.');
   const videoId = youtubeVideoId(youtubeUrl);
-  if (String(youtubeUrl || '').trim() && !videoId) throw new Error('Enter a valid YouTube video URL.');
+  if (String(youtubeUrl || '').trim() && !videoId) throw validationError('Enter a valid YouTube video URL.');
   const cleanExcerpt = String(excerpt || '').trim().slice(0, 500) || cleanContent.replace(/\s+/g, ' ').slice(0, 220);
   const status = publish ? 'PUBLISHED' : 'DRAFT';
   const publishedAt = publish ? new Date() : null;
