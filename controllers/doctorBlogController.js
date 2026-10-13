@@ -47,7 +47,8 @@ async function create(req, res, next) {
   } catch (err) {
     removeUploadedFile(req.file);
     if (err instanceof AppError) return next(err);
-    req.flash('errors', [{ message: err.message || 'Could not save the blog.' }]);
+    if (err.name !== 'BlogValidationError') return next(err);
+    req.flash('errors', [{ message: err.message }]);
     req.flash('formData', req.body);
     res.redirect('/doctor/blogs/new');
   }
