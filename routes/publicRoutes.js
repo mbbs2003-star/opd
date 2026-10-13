@@ -7,6 +7,8 @@ router.get('/', asyncHandler(publicController.home));
 router.get('/patient-portal-info', publicController.patientPortalInfo);
 router.get('/services', asyncHandler(publicController.services));
 router.get('/our-doctors', asyncHandler(publicController.doctors));
+router.get('/blog', asyncHandler(publicController.blogs));
+router.get('/blog/:slug', asyncHandler(publicController.blogDetail));
 router.get('/lab-diagnostics', publicController.labDiagnostics);
 router.get('/contact', publicController.contact);
 router.get('/live-opd', asyncHandler(publicController.liveOpd));
