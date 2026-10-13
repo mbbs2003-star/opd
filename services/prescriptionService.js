@@ -202,9 +202,9 @@ async function insertItems(conn, prescriptionId, items, actorUserId) {
 
   for (let i = 0; i < items.length; i++) {
     const it = items[i];
-    const name = String(it.medicineName || '').trim();
-    const composition = String(it.composition || '').trim() || null;
-    const form = String(it.medicineForm || '').trim() || null;
+    const name = String(it.medicineName || '').trim().slice(0, 150);
+    const composition = String(it.composition || '').trim().slice(0, 500) || null;
+    const form = String(it.medicineForm || '').trim().slice(0, 40) || null;
 
     // Register new medicines automatically when a doctor prescribes them.
     let medicineId = null;
