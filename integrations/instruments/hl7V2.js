@@ -11,17 +11,17 @@ function component(value, index = 1) {
 }
 function clean(value, label, max = 500) {
   const out = String(value || '').trim();
-  if (!out || out.length > max || /[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]/.test(out)) throw new Error(label + ' is missing or invalid');
+  if (!out || out.length > max || /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(out)) throw new Error(label + ' is missing or invalid');
   return out;
 }
 function parseHl7Orur01(payload, profile = {}) {
   if (typeof payload !== 'string' || payload.length < 10 || payload.length > 2 * 1024 * 1024) throw new Error('HL7 payload must be a non-empty string up to 2 MB');
-  const normalized = payload.replace(/^\\x0b/, '').replace(/[\\x1c\\x0d]+$/, '');
-  const segments = normalized.split(/\\r\\n|\\n|\\r/).filter(Boolean);
+  const normalized = payload.replace(/^\x0b/, '').replace(/[\x1c\x0d]+$/, '');
+  const segments = normalized.split(/\r\n|\n|\r/).filter(Boolean);
   if (!segments.length || !segments[0].startsWith('MSH|')) throw new Error('HL7 MSH segment is required');
   const mshFields = segments[0].split('|');
   const messageType = (mshFields[8] || '').trim();
-  if (!/^ORU\\^R01(?:\\^|$)/.test(messageType)) throw new Error('Only HL7 ORU^R01 messages are supported by this offline parser');
+  if (!/^ORU\^R01(?:\^|$)/.test(messageType)) throw new Error('Only HL7 ORU^R01 messages are supported by this offline parser');
   const messageId = clean(mshFields[9], 'MSH-10 message control ID', 180);
   const observations = [];
   let currentObr = null;
